@@ -1,0 +1,24 @@
+# 1. 보안 및 환경변수 파일
+.env
+secret.json
+api_keys.txt
+serviceAccountKey.json
+
+# 2. 파이썬 관련 임시 파일 및 가상환경 폴더
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.venv/
+
+# 3. 운영체제(OS)가 자동 생성하는 쓸데없는 찌꺼기 파일들
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 4. 파이어베이스/노드 관련 임시 로그 (나중에 쓸 수 있으니 미리 추가)
+node_modules/
+firebase-debug.log
+firebase-debug.*.log
+firebase-key.json
