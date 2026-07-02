@@ -11,7 +11,7 @@ venv/
 env/
 .venv/
 
-# 3. 운영체제(OS)가 자동 생성하는 쓸데없는 찌꺼기 파일들
+# 3. 운영체제(OS)가 자동 생성하는 파일들
 .DS_Store
 Thumbs.db
 desktop.ini
@@ -20,3 +20,4 @@ desktop.ini
 node_modules/
 firebase-debug.log
 firebase-debug.*.log
+firebase-key.json
