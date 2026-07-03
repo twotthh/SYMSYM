@@ -21,7 +21,7 @@ def test_push():
     }
     
     doc_ref = db.collection('threat_intel').add(mock_data)
-    print("✅ 전송 완료!")
+    print("전송 완료")
 
 if __name__ == '__main__':
     test_push()
