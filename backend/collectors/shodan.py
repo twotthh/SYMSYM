@@ -6,7 +6,6 @@ load_dotenv()
 
 API_KEY = os.getenv("SHODAN_API_KEY")
 
-
 def get_host(ip: str):
     """
     특정 IP의 정보를 조회
@@ -26,9 +25,8 @@ def get_host(ip: str):
 
     return response
 
-
 if __name__ == "__main__":
-
+    
     response = get_host("8.8.8.8")
 
     print("Status:", response.status_code)
