@@ -1,34 +1,45 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 
 @dataclass
-class ThreatEvent:
+class AsmAsset:
     """
-    OSINT 기반 위협 이벤트 모델
-    (HIBP, GitHub, Telegram 등 공통 사용)
+    ASM(Attack Surface Management) 자산 모델
+    (Censys, Shodan 공통 사용 ver.)
     """
 
+    # 데이터 출처
     source: str
 
-    email: Optional[str] = None
-    leaked_keyword: Optional[str] = None
+    # 자산 정보
+    ip: str
+    domain: Optional[str] = None
+    hostname: Optional[List[str]] = None
 
-    breach_name: Optional[str] = None
+    # 네트워크 정보
+    organization: Optional[str] = None
+    isp: Optional[str] = None
+    asn: Optional[str] = None
+    country: Optional[str] = None
 
-    repository: Optional[str] = None
-    file_path: Optional[str] = None
-    url: Optional[str] = None
+    # 서비스 정보
+    open_ports: Optional[List[int]] = None
+    service_count: Optional[int] = None
+    protocol: Optional[str] = None
+    banner: Optional[str] = None
+    os: Optional[str] = None
 
-    channel_name: Optional[str] = None
-    channel_id: Optional[str] = None
-    message_id: Optional[str] = None
+    # 취약점 정보
+    vulnerabilities: Optional[List[dict]] = None
 
-    threat_level: str = "LOW"
+    # 평판 정보 (Censys)
+    reputation_score: Optional[int] = None
+    reputation_level: Optional[str] = None
 
-    description: str = ""
+    # 스캔 정보
+    last_scan: Optional[datetime] = None
 
-    detected_at: Optional[datetime] = None
-
-    is_confirmed: bool = False
+    # 시스템 관리
+    is_alerted: bool = False
