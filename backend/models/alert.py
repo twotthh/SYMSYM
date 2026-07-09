@@ -10,6 +10,8 @@ class Alert:
 
     user_email: str
 
+    event_id: str
+
     source: str
 
     alert_type: str
