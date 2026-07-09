@@ -10,13 +10,15 @@ class Alert:
 
     user_email: str
 
-    event_id: str
+    source: str
 
     alert_type: str
 
     title: str
 
     message: str
+
+    threat_level: str
 
     sent_at: datetime
 
