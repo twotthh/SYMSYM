@@ -1,74 +1,98 @@
 import os
+import time
 import requests
+from datetime import datetime
 from dotenv import load_dotenv
 
 from backend.models.threat_event import ThreatEvent
+from backend.services.aws_db import save_to_dynamodb
+from backend.utils.mapper import threat_event_to_dynamodb_item
 
 load_dotenv()
 
 TOKEN = os.getenv("GITHUB_API_TOKEN")
 
-def search_github_email(email: str):
-    """
-    특정 이메일이 포함된 GitHub 소스 코드를 검색합니다.
-    """
-    # repositories(저장소) -> code(코드 내용)으로 타겟 변경
-    url = "https://api.github.com/search/code"
+# [교수님 피드백 1] 타겟 확장
+TARGET_ORGS = ["samsung", "ahnlab", "duksung.ac.kr", "go.kr"]
 
+# [교수님 피드백 2] 키워드 매칭
+THREAT_KEYWORDS = ["internal", "confidential", "dump", "credentials"]
+
+def search_github_leaks():
+    if not TOKEN:
+        print("[오류] GITHUB_API_TOKEN이 없음 -> env 확인")
+        return []
+
+    # [교수님 피드백 3] 'search/code'에서 'search/repositories'로 변경
+    url = "https://api.github.com/search/repositories"
+    
     headers = {
         "Authorization": f"Bearer {TOKEN}",
         "Accept": "application/vnd.github+json"
     }
 
-    params = {
-        "q": f'"{email}"', 
-        "per_page": 5
-    }
+    all_events = []
 
-    response = requests.get(
-        url,
-        headers=headers,
-        params=params,
-        timeout=10
-    )
+    for org in TARGET_ORGS:
+        for keyword in THREAT_KEYWORDS:
+            # 예: "samsung internal", "go.kr dump" 등의 쿼리 생성
+            search_query = f'"{org}" "{keyword}"'
+            print(f"[GitHub] '{search_query}' 검색 중")
+            
+            params = {
+                "q": search_query, 
+                "per_page": 3  # 상위 3개 위험 레포지토리만 추출 (API 한도 및 시연용)
+            }
 
-    if response.status_code != 200:
-        print(f"GitHub API 에러: {response.text}")
-        return []
+            try:
+                response = requests.get(url, headers=headers, params=params, timeout=10)
 
-    data = response.json()
-    events = []
+                if response.status_code == 403:
+                    print("GitHub API 속도 제한 -> 잠시 대기")
+                    time.sleep(10)
+                    continue
+                elif response.status_code != 200:
+                    print(f"GitHub API 에러: {response.text}")
+                    continue
 
-    # 코드 파일(.py, .txt 등) 기준으로 정보 추출
-    for item in data.get("items", []):
-        repo = item.get("repository", {})
+                data = response.json()
+                
+                for item in data.get("items", []):
+                    detected_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    repo_name = item.get("full_name")
+                    description = item.get("description") or "설명 없음"
+                    repo_url = item.get("html_url")
 
-        event = ThreatEvent(
-            source="GitHub",
-            email=email, # 어떤 이메일이 털렸는지 
-            repository=repo.get("full_name"),
-            file_path=item.get("path"), # 털린 파일 이름 (예: config.py)
-            url=item.get("html_url"),   # 클릭하면 유출된 코드로 바로 가는 링크
-            threat_level="HIGH",        # 개인 이메일 유출이므로 위험도 HIGH로
-            description=f"GitHub 소스코드 내에서 '{email}' 유출 의심 파일 발견"
-        )
+                    event = ThreatEvent(
+                        source="GitHub",
+                        email=org,             # AWS DB 저장을 위해 기관명을 기준 열쇠로 사용
+                        leaked_keyword=keyword,
+                        repository=repo_name,
+                        url=repo_url,
+                        # threat_level 하드코딩 삭제 (risk_service가 할 일)
+                        description=f"[저장소 유출] {description[:150]}",
+                        detected_at=detected_at,
+                        is_confirmed=False
+                    )
 
-        events.append(event)
+                    all_events.append(event)
 
-    return events
+                    # AWS DynamoDB 규격화 및 자동 적재
+                    item_to_save = threat_event_to_dynamodb_item(event)
+                    save_to_dynamodb('symsym-threat-events', item_to_save)
 
+                time.sleep(3)
+
+            except Exception as e:
+                print(f"GitHub 검색 중 에러 발생: {e}")
+
+    return all_events
 
 if __name__ == "__main__":
-    # 나중에 user.py에서 받아올 사용자의 이메일이라고 가정
-    test_email = "test@duksung.ac.kr" 
+    print("깃허브 - 기업 기밀 유출 스캔 시작\n")
+    events = search_github_leaks()
     
-    print(f"[{test_email}] 깃허브 코드 유출 검사 시작\n")
-    
-    events = search_github_email(test_email)
-
     if not events:
-        print("다행히 깃허브에 유출된 코드가 없습니다")
+        print("타겟 기관의 기밀이 유출된 깃허브 저장소가 없음")
     else:
-        for event in events:
-            print(event)
-            print("-" * 50)
+        print(f"\n총 {len(events)}건의 위험 저장소를 찾아 AWS에 적재 완료")

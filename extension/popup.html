@@ -23,6 +23,26 @@
             padding:12px;
             margin-bottom:10px;
             box-shadow:0 2px 5px rgba(0,0,0,0.08);
+            font-size: 13px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #1976d2;
         }
 
         .status{
@@ -35,27 +55,63 @@
             font-weight:bold;
         }
 
-        button{
-            width:100%;
-            padding:10px;
-            border:none;
-            border-radius:8px;
-            background:#1976d2;
-            color:white;
-            cursor:pointer;
-            font-size:14px;
+        .CRITICAL { color: #b71c1c; font-weight: bold; }
+        .HIGH { color: #d32f2f; font-weight: bold; }
+        .MEDIUM { color: #f57c00; font-weight: bold; }
+
+        .threat-item {
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+            line-height: 1.4;
         }
 
-        button:hover{
-            background:#1565c0;
+        .threat-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+            margin-bottom: 0;
+        }
+
+        #scanBtn {
+            width: 70px;
+            padding: 8px;
+            border: none;
+            border-radius: 8px;
+            background: #1976d2;
+            color: white;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        #scanBtn:hover {
+            background: #1565c0;
+        }
+
+        .nav-btn {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            background: #2c3e50;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .nav-btn:hover {
+            background: #1a252f;
         }
     </style>
-
 </head>
-
 <body>
 
-<h2>🛡️ SYMSYM</h2>
+<h2>SYMSYM</h2>
+
+<div class="input-group">
+    <input type="text" id="emailInput" placeholder="도메인 입력 (ex: samsung.com)" value="samsung.com">
+    <button id="scanBtn">조회</button>
+</div>
 
 <div class="card">
     <b>모니터링 상태</b><br>
@@ -63,16 +119,15 @@
 </div>
 
 <div class="card">
-    <b>최근 검사</b><br>
-    오늘 14:30
+    <b>실시간 위협 탐지 결과</b><br>
+    <div id="result-box" style="margin-top: 8px; color: #555;">
+        도메인을 입력하고 조회 버튼을 눌러주세요.
+    </div>
 </div>
 
-<div class="card">
-    <b>최근 위협</b><br>
-    <span class="warning">없음</span>
-</div>
+<button class="nav-btn">대시보드 보기</button>
 
-<button>대시보드 보기</button>
+<script src="popup.js"></script>
 
 </body>
 </html>
