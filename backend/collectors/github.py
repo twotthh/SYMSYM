@@ -35,7 +35,6 @@ def search_github_leaks():
 
     for org in TARGET_ORGS:
         for keyword in THREAT_KEYWORDS:
-            # 예: "samsung internal", "go.kr dump" 등의 쿼리 생성
             search_query = f'"{org}" "{keyword}"'
             print(f"[GitHub] '{search_query}' 검색 중")
             
@@ -65,7 +64,7 @@ def search_github_leaks():
 
                     event = ThreatEvent(
                         source="GitHub",
-                        email=org,             # AWS DB 저장을 위해 기관명을 기준 열쇠로 사용
+                        email=org,             # AWS DB 저장을 위해 기관명을 기준으로 사용
                         leaked_keyword=keyword,
                         repository=repo_name,
                         url=repo_url,

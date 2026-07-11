@@ -1,9 +1,12 @@
 import os
 import boto3
+import hashlib
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from boto3.dynamodb.conditions import Key
 from dotenv import load_dotenv
+from pydantic import BaseModel
 
 load_dotenv()
 
@@ -66,3 +69,53 @@ def get_user_alerts(email: str):
     except Exception as e:
         print(f"[API 서버 에러] DynamoDB 조회 실패 : {e}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
+    
+# 클라이언트에서 보낼 데이터 규격 정의
+class UserAuth(BaseModel):
+    email: str
+    password: str
+
+# 비밀번호 암호화 함수
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+# 1. 회원가입 API
+@app.post("/api/register")
+def register_user(user: UserAuth):
+    table = dynamodb.Table('symsym-users')
+    
+    # 이미 가입된 이메일인지 확인
+    response = table.get_item(Key={'email': user.email})
+    if 'Item' in response:
+        raise HTTPException(status_code=400, detail="이미 가입된 이메일입니다.")
+    
+    # 새 회원 DB에 저장 (비밀번호는 암호화)
+    try:
+        table.put_item(
+            Item={
+                'email': user.email,
+                'password_hash': hash_password(user.password)
+            }
+        )
+        return {"message": "회원가입이 완료되었습니다!"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"DB 저장 실패 : {e}")
+
+# 2. 로그인 API
+@app.post("/api/login")
+def login_user(user: UserAuth):
+    table = dynamodb.Table('symsym-users')
+    
+    # DB에서 이메일 검색
+    response = table.get_item(Key={'email': user.email})
+    db_user = response.get('Item')
+    
+    if not db_user:
+        raise HTTPException(status_code=400, detail="가입되지 않은 이메일입니다.")
+    
+    # 비밀번호 검증
+    if db_user['password_hash'] != hash_password(user.password):
+        raise HTTPException(status_code=400, detail="비밀번호가 일치하지 않습니다.")
+    
+    # 로그인 성공 시 사용자 이메일 반환
+    return {"message": "로그인 성공", "email": user.email}

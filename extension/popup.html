@@ -2,146 +2,182 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>SYMSYM</title>
-
+    <title>SYMSYM Security Alert</title>
     <style>
-        body {
-            width: 320px;
-            padding: 15px;
-            font-family: "Malgun Gothic", sans-serif;
-            background: #fbf9f6; 
-            color: #4E0A0B;
-        }
-
-        h2 {
+        body { 
+            width: 320px; 
+            padding: 15px; 
+            font-family: "Malgun Gothic", sans-serif; 
+            background: #F2EEE8; 
             color: #4E0A0B; 
-            margin: 0 0 15px 0;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 20px;
         }
-
-        .card {
-            background: #ffffff;
-            border-radius: 12px;
-            padding: 14px;
-            margin-bottom: 12px;
+        
+        h2 { 
+            color: #4E0A0B; 
+            margin: 0 0 15px 0; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            font-size: 20px; 
+        }
+        
+        .card { 
+            background: #ffffff; 
+            border-radius: 12px; 
+            padding: 14px; 
+            margin-bottom: 12px; 
             box-shadow: 0 4px 15px rgba(78, 10, 11, 0.08); 
-            font-size: 13px;
-            border: 1px solid rgba(78, 10, 11, 0.08);
+            font-size: 13px; 
+            border: 1px solid rgba(78, 10, 11, 0.08); 
         }
 
-        .card b {
-            color: #4E0A0B;
-            display: inline-block;
-            margin-bottom: 4px;
+        .card b { 
+            color: #4E0A0B; 
+            display: inline-block; 
+            margin-bottom: 4px; 
         }
 
-        .input-group {
-            display: flex;
-            gap: 6px;
-            margin-bottom: 12px;
+        .input-group { 
+            display: flex; 
+            gap: 6px; 
+            margin-bottom: 12px; 
         }
 
-        input {
-            flex: 1;
-            padding: 10px 12px;
-            border: 1px solid rgba(78, 10, 11, 0.2);
-            border-radius: 8px;
-            font-size: 13px;
-            outline: none;
-            background: #ffffff;
-            color: #4E0A0B;
-            transition: border-color 0.2s;
-        }
-
-        input:focus {
-            border-color: #E38792;
-        }
-
-        .status {
-            color: #9DAD71; 
-            font-weight: bold;
-        }
-
-        .CRITICAL { color: #4E0A0B; font-weight: bold; } 
-        .HIGH { color: #E38792; font-weight: bold; }   
-        .MEDIUM { color: #d4a373; font-weight: bold; }  
-
-        .threat-item {
-            border-bottom: 1px solid rgba(78, 10, 11, 0.08);
-            padding-bottom: 8px;
-            margin-bottom: 8px;
-            line-height: 1.5;
-        }
-
-        .threat-item:last-child {
-            border-bottom: none;
-            padding-bottom: 0;
+        .input-group input {
             margin-bottom: 0;
+            height: 40px;   
         }
-
-        #scanBtn {
+        
+        #scanBtn { 
             width: 70px;
-            padding: 10px;
-            border: none;
-            border-radius: 8px;
-            background: #E38792;
+            height: 40px;  
+            padding: 0;    
+            border: none; 
+            border-radius: 8px; 
+            background: #E38792; 
             color: #ffffff; 
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: bold;
-            transition: background 0.2s;
+            cursor: pointer; 
+            font-size: 13px; 
+            font-weight: bold; 
+            margin-bottom: 0; 
         }
 
-        #scanBtn:hover {
-            background: #c96b77; 
+        input { 
+            flex: 1; 
+            padding: 10px 12px; 
+            border: 1px solid rgba(78, 10, 11, 0.2); 
+            border-radius: 8px; 
+            font-size: 13px; 
+            outline: none; 
+            background: #ffffff; 
+            color: #4E0A0B; 
+            transition: border-color 0.2s; 
+            box-sizing: border-box; 
+            width: 100%; 
+            margin-bottom: 8px; 
         }
 
-        .nav-btn {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            background: #4E0A0B;
-            color: #F2EEE8;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            margin-top: 4px;
-            transition: background 0.2s;
-            box-shadow: 0 4px 10px rgba(78, 10, 11, 0.2);
+        input:focus { 
+            border-color: #E38792; 
         }
 
-        .nav-btn:hover {
-            background: #360607; 
+        .status { 
+            color: #9DAD71; 
+            font-weight: bold; 
         }
+
+        .CRITICAL { color: #4E0A0B; font-weight: bold; }
+        .HIGH { color: #E38792; font-weight: bold; }
+        .MEDIUM { color: #d4a373; font-weight: bold; }
+        
+        .threat-item { 
+            border-bottom: 1px solid rgba(78, 10, 11, 0.08); 
+            padding-bottom: 8px; 
+            margin-bottom: 8px; 
+            line-height: 1.5; 
+        }
+
+        .threat-item:last-child { 
+            border-bottom: none; 
+            padding-bottom: 0; 
+            margin-bottom: 0; 
+        }
+        
+        .btn-primary { 
+            width: 100%; 
+            padding: 12px; 
+            border: none; 
+            border-radius: 8px; 
+            background: #4E0A0B; 
+            color: #F2EEE8; 
+            cursor: pointer; 
+            font-size: 14px; 
+            font-weight: bold; 
+            transition: 0.2s; 
+        }
+
+        .btn-primary:hover { background: #360607; }
+        
+        .btn-secondary { 
+            width: 100%; 
+            padding: 12px; 
+            border: 1px solid #4E0A0B; 
+            border-radius: 8px; 
+            background: transparent; 
+            color: #4E0A0B; 
+            cursor: pointer; 
+            font-size: 14px; 
+            font-weight: bold; 
+            transition: 0.2s; 
+            margin-top: 6px; 
+        }
+
+        .btn-secondary:hover { background: rgba(78, 10, 11, 0.05); }
+
+        #scanBtn:hover { background: #c96b77; }
+
+        #logoutBtn { font-size: 11px; color: #666; cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; }
     </style>
 </head>
 <body>
 
-<h2>Find yours!</h2>
+    <h2>
+        <span>SYMSYM</span>
+        <button id="logoutBtn" style="display: none;">로그아웃</button>
+    </h2>
 
-<div class="input-group">
-    <input type="text" id="emailInput" placeholder="도메인 입력 (ex: duksung.ac.kr)">
-    <button id="scanBtn">조회</button>
-</div>
-
-<div class="card">
-    <b>모니터링 상태</b><br>
-    <span class="status">정상 작동 중</span>
-</div>
-
-<div class="card">
-    <b>실시간 위협 탐지 결과</b><br>
-    <div id="result-box" style="margin-top: 8px; color: #4E0A0B; opacity: 0.8; line-height: 1.4;">
-        도메인을 입력하고 조회 버튼을 눌러주세요.
+    <div id="auth-section">
+        <div class="card">
+            <b style="font-size: 15px; margin-bottom: 10px;">환영합니다!</b><br>
+            <span style="color: #666; font-size: 12px;">서비스를 이용하려면 로그인해주세요.</span>
+            <div style="margin-top: 15px;">
+                <input type="email" id="authEmail" placeholder="이메일 입력">
+                <input type="password" id="authPassword" placeholder="비밀번호 입력">
+                <button id="loginBtn" class="btn-primary">로그인</button>
+                <button id="registerBtn" class="btn-secondary">회원가입</button>
+            </div>
+            <div id="authMessage" style="color: #E38792; font-size: 12px; margin-top: 10px; text-align: center;"></div>
+        </div>
     </div>
-</div>
 
-<button class="nav-btn">대시보드 보기</button>
+    <div id="main-section" style="display: none;">
+        <div class="input-group">
+            <input type="text" id="emailInput" placeholder="도메인 입력 (ex: example@gmail.com)">
+            <button id="scanBtn">조회</button>
+        </div>
+        <div class="card">
+            <b>모니터링 상태</b><br>
+            <span class="status">정상 작동 중</span>
+        </div>
+        <div class="card">
+            <b>실시간 탐지 결과</b><br>
+            <div id="result-box" style="margin-top: 8px; color: #4E0A0B; opacity: 0.8; line-height: 1.4;">
+                도메인을 입력하고 조회 버튼을 눌러주세요.
+            </div>
+        </div>
+        <button class="btn-primary" id="dashboardBtn" style="margin-top: 4px;">대시보드 보기</button>
+    </div>
 
-<script src="popup.js"></script>
+    <script src="popup.js"></script>
 </body>
 </html>
