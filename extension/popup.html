@@ -2,28 +2,40 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>SYMSYM Security Alert</title>
+    <title>SYMSYM</title>
 
     <style>
-        body{
-            width:320px;
-            padding:15px;
-            font-family:"Malgun Gothic",sans-serif;
-            background:#f8f9fa;
+        body {
+            width: 320px;
+            padding: 15px;
+            font-family: "Malgun Gothic", sans-serif;
+            background: #fbf9f6; 
+            color: #4E0A0B;
         }
 
-        h2{
-            color:#d32f2f;
-            margin:0 0 15px 0;
+        h2 {
+            color: #4E0A0B; 
+            margin: 0 0 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 20px;
         }
 
-        .card{
-            background:white;
-            border-radius:10px;
-            padding:12px;
-            margin-bottom:10px;
-            box-shadow:0 2px 5px rgba(0,0,0,0.08);
+        .card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 15px rgba(78, 10, 11, 0.08); 
             font-size: 13px;
+            border: 1px solid rgba(78, 10, 11, 0.08);
+        }
+
+        .card b {
+            color: #4E0A0B;
+            display: inline-block;
+            margin-bottom: 4px;
         }
 
         .input-group {
@@ -34,36 +46,34 @@
 
         input {
             flex: 1;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
+            padding: 10px 12px;
+            border: 1px solid rgba(78, 10, 11, 0.2);
             border-radius: 8px;
             font-size: 13px;
             outline: none;
+            background: #ffffff;
+            color: #4E0A0B;
+            transition: border-color 0.2s;
         }
 
         input:focus {
-            border-color: #1976d2;
+            border-color: #E38792;
         }
 
-        .status{
-            color:#2e7d32;
-            font-weight:bold;
+        .status {
+            color: #9DAD71; 
+            font-weight: bold;
         }
 
-        .warning{
-            color:#d32f2f;
-            font-weight:bold;
-        }
-
-        .CRITICAL { color: #b71c1c; font-weight: bold; }
-        .HIGH { color: #d32f2f; font-weight: bold; }
-        .MEDIUM { color: #f57c00; font-weight: bold; }
+        .CRITICAL { color: #4E0A0B; font-weight: bold; } 
+        .HIGH { color: #E38792; font-weight: bold; }   
+        .MEDIUM { color: #d4a373; font-weight: bold; }  
 
         .threat-item {
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid rgba(78, 10, 11, 0.08);
             padding-bottom: 8px;
             margin-bottom: 8px;
-            line-height: 1.4;
+            line-height: 1.5;
         }
 
         .threat-item:last-child {
@@ -74,42 +84,47 @@
 
         #scanBtn {
             width: 70px;
-            padding: 8px;
+            padding: 10px;
             border: none;
             border-radius: 8px;
-            background: #1976d2;
-            color: white;
+            background: #E38792;
+            color: #ffffff; 
             cursor: pointer;
             font-size: 13px;
+            font-weight: bold;
+            transition: background 0.2s;
         }
 
         #scanBtn:hover {
-            background: #1565c0;
+            background: #c96b77; 
         }
 
         .nav-btn {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             border: none;
             border-radius: 8px;
-            background: #2c3e50;
-            color: white;
+            background: #4E0A0B;
+            color: #F2EEE8;
             cursor: pointer;
             font-size: 14px;
-            margin-top: 5px;
+            font-weight: bold;
+            margin-top: 4px;
+            transition: background 0.2s;
+            box-shadow: 0 4px 10px rgba(78, 10, 11, 0.2);
         }
 
         .nav-btn:hover {
-            background: #1a252f;
+            background: #360607; 
         }
     </style>
 </head>
 <body>
 
-<h2>SYMSYM</h2>
+<h2>Find yours!</h2>
 
 <div class="input-group">
-    <input type="text" id="emailInput" placeholder="도메인 입력 (ex: samsung.com)" value="samsung.com">
+    <input type="text" id="emailInput" placeholder="도메인 입력 (ex: duksung.ac.kr)">
     <button id="scanBtn">조회</button>
 </div>
 
@@ -120,7 +135,7 @@
 
 <div class="card">
     <b>실시간 위협 탐지 결과</b><br>
-    <div id="result-box" style="margin-top: 8px; color: #555;">
+    <div id="result-box" style="margin-top: 8px; color: #4E0A0B; opacity: 0.8; line-height: 1.4;">
         도메인을 입력하고 조회 버튼을 눌러주세요.
     </div>
 </div>
@@ -128,6 +143,5 @@
 <button class="nav-btn">대시보드 보기</button>
 
 <script src="popup.js"></script>
-
 </body>
 </html>
