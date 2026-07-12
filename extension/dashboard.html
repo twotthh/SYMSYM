@@ -1,155 +1,386 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <title>SYMSYM Dashboard</title>
-    <style>
-        body {
-            margin: 0; padding: 0;
-            font-family: 'Malgun Gothic', sans-serif;
-            background: #fbf9f6;
-            color: #4E0A0B;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SYMSYM · 실시간 위협 모니터링</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+<style>
+  :root{
+    --bg: #FAF6F1;
+    --surface: #FFFFFF;
+    --line: #ECE1D5;
+    --ink: #241A15;
+    --mist: #93807A;
+    --mist-soft: #CDBEB4;
 
-        header {
-            background: #4E0A0B;
-            color: #F2EEE8;
-            padding: 20px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 10px rgba(78, 10, 11, 0.2);
-        }
-        
-        header h1 { margin: 0; font-size: 24px; }
+    --brand: #B5432A;
+    --brand-hover: #9A3620;
+    --brand-ink: #FFFFFF;
+    --brand-tint: #F7E7E0;
 
-        .container {
-            max-width: 1000px;
-            margin: 40px auto;
-            padding: 0 20px;
-        }
+    --mint: #A9791F;
+    --mint-bg: #F8EFDB;
+    --amber: #D97B2E;
+    --amber-bg: #FBEADB;
+    --coral: #BE2440;
+    --coral-bg: #F9E1E4;
+    
+    --safe: #829E65;
 
-        .search-box {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
-            background: #ffffff;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(78, 10, 11, 0.05);
-        }
+    --font: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
 
-        .search-box input {
-            flex: 1;
-            padding: 15px;
-            font-size: 16px;
-            border: 2px solid rgba(78, 10, 11, 0.1);
-            border-radius: 8px;
-            color: #4E0A0B;
-            outline: none;
-        }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
 
-        .search-box input:focus { border-color: #E38792; }
+  body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font);
+    min-height:100vh;
+    -webkit-font-smoothing: antialiased;
+  }
 
-        .search-box button {
-            padding: 0 30px;
-            font-size: 16px;
-            font-weight: bold;
-            background: #E38792; /* cotton candy */
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
+  a{ color:inherit; text-decoration:none; }
+  :focus-visible{ outline: 2.5px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
 
-        .search-box button:hover { background: #c96b77; }
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding: 22px 40px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+  }
 
-        .summary-cards {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-bottom: 30px;
-        }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-weight:800;
+    font-size: 19px;
+    letter-spacing: -0.01em;
+  }
 
-        .stat-card {
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(78, 10, 11, 0.05);
-            text-align: center;
-            border-top: 5px solid #4E0A0B;
-        }
+  .live-status{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-weight: 600;
+    font-size: 13.5px;
+    color: var(--mist);
+  }
 
-        .stat-card h3 { margin: 0 0 10px 0; color: #666; font-size: 16px; }
-        .stat-card .number { font-size: 36px; font-weight: bold; color: #4E0A0B; }
+  .dot{
+    width:7px; height:7px;
+    border-radius:50%;
+    background: var(--mint);
+    box-shadow: 0 0 0 0 rgba(169,121,31,0.5);
+    animation: pulse 2.2s infinite;
+  }
 
-        .detail-section {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(78, 10, 11, 0.05);
-        }
+  @keyframes pulse{
+    0%{ box-shadow: 0 0 0 0 rgba(169,121,31,0.5); }
+    70%{ box-shadow: 0 0 0 6px rgba(169,121,31,0); }
+    100%{ box-shadow: 0 0 0 0 rgba(169,121,31,0); }
+  }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 15px; text-align: left; border-bottom: 1px solid rgba(78, 10, 11, 0.1); }
-        th { background: #F2EEE8; color: #4E0A0B; font-weight: bold; }
-        
-        .CRITICAL { color: white; background: #4E0A0B; padding: 4px 10px; border-radius: 4px; font-size: 12px; }
-        .HIGH { color: white; background: #E38792; padding: 4px 10px; border-radius: 4px; font-size: 12px; }
-        .SAFE { color: white; background: #9DAD71; padding: 4px 10px; border-radius: 4px; font-size: 12px; }
-    </style>
+  main{
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 40px 40px 80px;
+  }
+
+  .scan-bar{
+    display:flex;
+    align-items:center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1.5px solid var(--line);
+    border-radius: 14px;
+    padding: 6px 6px 6px 18px;
+    margin-bottom: 28px;
+    transition: border-color .15s ease;
+  }
+
+  .scan-bar:focus-within{ border-color: var(--brand); }
+
+  .scan-bar input{
+    flex:1;
+    background: transparent;
+    border: none;
+    color: var(--ink);
+    font-family: var(--font);
+    font-weight: 500;
+    font-size: 15px;
+    padding: 13px 0;
+  }
+
+  .scan-bar input::placeholder{ color: var(--mist-soft); }
+
+  .scan-bar input:focus{ outline:none; }
+
+  .scan-btn{
+    background: var(--brand);
+    color: #fff;
+    border:none;
+    font-family: var(--font);
+    font-weight: 700;
+    font-size: 14.5px;
+    padding: 13px 22px;
+    border-radius: 10px;
+    cursor:pointer;
+    transition: background .15s ease;
+    white-space: nowrap;
+  }
+
+  .scan-btn:hover{ background: #9A3620; }
+
+  .scan-btn.loading{ pointer-events:none; opacity:.7; }
+
+  .stats{
+    display:grid;
+    grid-template-columns: 1fr 1.2fr 1fr;
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+
+  .stat-card{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 22px 22px;
+    display:flex;
+    flex-direction:column;
+    gap: 10px;
+  }
+
+  .stat-label{
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--mist);
+  }
+
+  .stat-value{
+    font-weight: 800;
+    font-size: 32px;
+    line-height: 1;
+    display:flex;
+    align-items: baseline;
+    gap: 5px;
+    color: var(--ink);
+  }
+
+  .stat-value small{
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--mist);
+  }
+
+  .status-caution{
+    color: var(--amber); 
+    font-size: 22px;
+  }
+
+  .status-caution small{ display:block; font-size: 12px; margin-top:5px; color: var(--mist); font-weight:500; }
+
+  .stat-card.risk-hero{
+    background: var(--amber); 
+    border: none;
+    color: #fff;
+    justify-content: space-between;
+    transition: background 0.3s ease;
+  }
+
+  .risk-hero .stat-label{ color: rgba(255,255,255,0.78); }
+  .risk-hero .stat-value{ color: #fff; font-size: 36px; }
+  .risk-hero .stat-value small{ color: rgba(255,255,255,0.78); }
+
+  .meter{
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.28);
+    overflow: hidden;
+  }
+
+  .meter-fill{
+    height: 100%;
+    width: 0%; 
+    background: #fff;
+    border-radius: 999px;
+    transition: width 1s ease-in-out;
+  }
+
+  .log-panel{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  .log-panel-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .log-panel-head h2{
+    font-size: 16px;
+    font-weight: 800;
+    margin:0;
+  }
+
+  .log-count{
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--mist);
+  }
+
+  .log-row{
+    display:grid;
+    grid-template-columns: 90px 130px 1fr 20px;
+    align-items:center;
+    gap: 12px;
+    padding: 17px 24px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .log-row:last-child{ border-bottom:none; }
+  
+  .log-row.head{
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--mist-soft);
+    padding: 13px 24px;
+    letter-spacing: 0.02em;
+  }
+
+  .risk-tag{
+    display:inline-flex;
+    align-items:center;
+    justify-content: center;
+    gap:6px;
+    font-size: 11.5px;
+    font-weight: 800;
+    padding: 5px 10px;
+    border-radius: 6px;
+    width: 70px;
+  }
+  .risk-tag.low{ color: var(--mint); background: var(--mint-bg); }
+  .risk-tag.mid{ color: var(--amber); background: var(--amber-bg); }
+  .risk-tag.high{ color: var(--coral); background: var(--coral-bg); }
+  .risk-tag.safe{ color: var(--safe); background: #EAF0E2; }
+
+  .source-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-weight: 700;
+    font-size: 13.5px;
+  }
+
+  .source-dot{ width:8px; height:8px; border-radius:2px; background:#8B7768; display:inline-block; }
+
+  .detail-text{
+    color: var(--mist);
+    font-size: 13.5px;
+    font-weight: 500;
+  }
+
+  .chev{ text-align:right; color: var(--mist-soft); font-weight:700; }
+
+  footer{
+    max-width: 1080px;
+    margin: 18px auto 0;
+    padding: 0 40px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--mist-soft);
+    display:flex;
+    justify-content: space-between;
+  }
+
+  @media (max-width: 780px){
+    .topbar{ padding: 16px 20px; }
+    main{ padding: 24px 20px 60px; }
+    .stats{ grid-template-columns: 1fr; }
+    .scan-bar{ flex-wrap: wrap; }
+    .scan-btn{ width:100%; }
+    .log-row{ grid-template-columns: 1fr; gap: 6px; padding: 15px 20px; }
+    .log-row.head{ display:none; }
+    .chev{ display:none; }
+    footer{ flex-direction: column; gap:4px; padding: 0 20px; }
+  }
+</style>
 </head>
 <body>
 
-    <header>
-        <h1>SYMSYM Dashboard</h1>
-        <span>실시간 위협 모니터링 시스템</span>
-    </header>
+  <header class="topbar">
+    <div class="brand">
+      SYMSYM
+    </div>
+    <div class="live-status" id="liveStatus">
+      <span class="dot"></span>
+      실시간 모니터링 대기 중
+    </div>
+  </header>
 
-    <div class="container">
-        <div class="search-box">
-            <input type="text" id="targetInput" placeholder="이메일 또는 도메인을 입력하세요 (ex: example@gmail.com)">
-            <button id="analyzeBtn">딥스캔 분석</button>
-        </div>
-
-        <div id="loading" style="display: none; text-align: center; margin: 50px 0; font-weight: bold;">
-            AWS DynamoDB에서 실시간 위협 데이터를 분석 중
-        </div>
-
-        <div id="dashboard-content" style="display: none;">
-            <div class="summary-cards">
-                <div class="stat-card">
-                    <h3>총 발견된 위협 (건)</h3>
-                    <div class="number" id="totalCount">0</div>
-                </div>
-                <div class="stat-card" id="scoreCard" style="border-top-color: #E38792;">
-                    <h3>종합 위험 점수</h3>
-                    <div class="number" id="riskScore" style="color: #E38792;">0점</div>
-                </div>
-                <div class="stat-card" style="border-top-color: #9DAD71;">
-                    <h3>안전 상태</h3>
-                    <div class="number" id="statusText" style="color: #9DAD71; font-size: 24px; padding-top: 10px;">분석 완료</div>
-                </div>
-            </div>
-
-            <div class="detail-section">
-                <h2>유출 상세 내역</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>위험도</th>
-                            <th>출처</th>
-                            <th>유출/취약점 상세 내용</th>
-                        </tr>
-                    </thead>
-                    <tbody id="resultBody">
-                        </tbody>
-                </table>
-            </div>
-        </div>
+  <main>
+    <div class="scan-bar">
+      <input id="targetInput" type="email" placeholder="스캔할 이메일 주소를 입력하세요">
+      <button class="scan-btn" id="analyzeBtn">모니터링 시작</button>
     </div>
 
-    <script src="dashboard.js"></script>
+    <section class="stats">
+      <div class="stat-card">
+        <span class="stat-label">총 발견된 위협</span>
+        <span class="stat-value"><span id="totalCount">0</span><small>건</small></span>
+      </div>
+
+      <div class="stat-card risk-hero" id="scoreCard" style="background: var(--mist-soft);">
+        <span class="stat-label">종합 위험 점수</span>
+        <span class="stat-value"><span id="riskScore">0</span><small>점 / 100점</small></span>
+        <div class="meter"><div class="meter-fill" id="scoreMeter"></div></div>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">안전 상태</span>
+        <span class="stat-value status-caution" id="statusText" style="color: var(--mist-soft);">
+            대기 중<small id="statusDesc">분석을 시작해주세요</small>
+        </span>
+      </div>
+    </section>
+
+    <section class="log-panel">
+      <div class="log-panel-head">
+        <h2>유출 상세 내역</h2>
+        <span class="log-count" id="logCountText">0건 표시 중</span>
+      </div>
+
+      <div class="log-row head">
+        <span>위험도</span>
+        <span>출처</span>
+        <span>유출 / 취약점 상세 내용</span>
+        <span></span>
+      </div>
+
+      <div id="resultBody">
+        <div class="log-row" style="grid-template-columns: 1fr; text-align: center; padding: 40px;">
+          <span class="detail-text">도메인이나 이메일을 입력하고 분석을 시작해주세요.</span>
+        </div>
+      </div>
+
+    </section>
+
+    <footer>
+      <span id="lastScanTime">마지막 스캔 · 기록 없음</span>
+      <span>SYMSYM SCAN ENGINE v1.0</span>
+    </footer>
+  </main>
+
+  <script src="dashboard.js"></script>
 </body>
 </html>

@@ -10,25 +10,25 @@ window.onload = () => {
 
 document.getElementById('analyzeBtn').addEventListener('click', async () => {
     const target = document.getElementById('targetInput').value.trim();
-    if (!target) return alert("모니터링을 원하는 이메일또는 도메인을 입력해주세요");
+    if (!target) return alert("분석할 이메일이나 도메인을 입력해주세요!");
 
-    document.getElementById('dashboard-content').style.display = 'none';
-    document.getElementById('loading').style.display = 'block';
+    const btn = document.getElementById('analyzeBtn');
+    btn.classList.add('loading');
+    btn.innerHTML = '스캔 중···';
+    
+    document.getElementById('liveStatus').innerHTML = `<span class="dot"></span>실시간 딥스캔 진행 중...`;
 
     try {
         const response = await fetch(`http://127.0.0.1:8000/api/alerts/${target}`);
         const data = await response.json();
-
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('dashboard-content').style.display = 'block';
 
         const tbody = document.getElementById('resultBody');
         tbody.innerHTML = '';
 
         if (data.alerts && data.alerts.length > 0) {
             document.getElementById('totalCount').innerText = data.alerts.length;
+            document.getElementById('logCountText').innerText = `${data.alerts.length}건 표시 중`;
             
-            // 종합 위험 점수 계산 (최대 위험도 기준)
             let maxScore = 0;
             data.alerts.forEach(a => {
                 if (a.threat_level === 'CRITICAL') maxScore = Math.max(maxScore, 100);
@@ -37,53 +37,80 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
                 else if (a.threat_level === 'LOW') maxScore = Math.max(maxScore, 20);
             });
 
-            const scoreElement = document.getElementById('riskScore');
-            const scoreCard = document.getElementById('scoreCard');
-            const statusElement = document.getElementById('statusText');
+            document.getElementById('riskScore').innerText = maxScore;
+            
+            setTimeout(() => {
+                document.getElementById('scoreMeter').style.width = maxScore + '%';
+            }, 100);
 
-            scoreElement.innerText = maxScore + "점";
+            const scoreCard = document.getElementById('scoreCard');
+            const statusText = document.getElementById('statusText');
 
             if (maxScore >= 80) {
-                scoreElement.style.color = "#4E0A0B"; // CRITICAL 
-                scoreCard.style.borderTopColor = "#4E0A0B";
-                statusElement.innerText = "심각한 위협";
-                statusElement.style.color = "#4E0A0B";
+                scoreCard.style.background = 'var(--coral)';
+                statusText.style.color = 'var(--coral)';
+                statusText.innerHTML = `심각<small id="statusDesc">즉각적인 조치가 필요합니다.</small>`;
             } else if (maxScore >= 50) {
-                scoreElement.style.color = "#E38792"; // MEDIUM
-                scoreCard.style.borderTopColor = "#E38792";
-                statusElement.innerText = "경고 (확인 요망)";
-                statusElement.style.color = "#E38792";
+                scoreCard.style.background = 'var(--amber)';
+                statusText.style.color = 'var(--amber)';
+                statusText.innerHTML = `경고<small id="statusDesc">확인이 필요한 위협이 있습니다.</small>`;
             } else {
-                scoreElement.style.color = "#d4a373"; // LOW 
-                scoreCard.style.borderTopColor = "#d4a373";
-                statusElement.innerText = "주의 (잠재적 위협)";
-                statusElement.style.color = "#d4a373";
+                scoreCard.style.background = 'var(--mint)';
+                statusText.style.color = 'var(--mint)';
+                statusText.innerHTML = `주의<small id="statusDesc">잠재적 위협이 감지됐어요.</small>`;
             }
 
             data.alerts.forEach(alert => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><span class="${alert.threat_level}">${alert.threat_level}</span></td>
-                    <td style="font-weight: bold;">${alert.source}</td>
-                    <td style="color: #666;">${alert.description}</td>
+                let tagClass = 'low';
+                let displayLevel = alert.threat_level;
+                
+                if (displayLevel === 'CRITICAL' || displayLevel === 'HIGH') tagClass = 'high';
+                else if (displayLevel === 'MEDIUM') tagClass = 'mid';
+                else tagClass = 'low';
+
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'log-row';
+                rowDiv.innerHTML = `
+                    <span class="risk-tag ${tagClass}">${displayLevel}</span>
+                    <span class="source-tag"><span class="source-dot"></span>${alert.source}</span>
+                    <span class="detail-text">${alert.description}</span>
+                    <span class="chev">›</span>
                 `;
-                tbody.appendChild(tr);
+                tbody.appendChild(rowDiv);
             });
+            
         } else {
-            // 안전일 때
             document.getElementById('totalCount').innerText = '0';
+            document.getElementById('logCountText').innerText = `0건 표시 중`;
+            document.getElementById('riskScore').innerText = '0';
+            document.getElementById('scoreMeter').style.width = '0%';
             
-            document.getElementById('riskScore').innerText = '0점';
-            document.getElementById('riskScore').style.color = "#9DAD71";
-            document.getElementById('scoreCard').style.borderTopColor = "#9DAD71";
+            document.getElementById('scoreCard').style.background = 'var(--safe)';
             
-            document.getElementById('statusText').innerText = "안전함 (Clean)";
-            document.getElementById('statusText').style.color = "#9DAD71";
+            const statusText = document.getElementById('statusText');
+            statusText.style.color = 'var(--safe)';
+            statusText.innerHTML = `안전<small id="statusDesc">발견된 보안 위협이 없습니다</small>`;
             
-            tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 30px;">발견된 유출 내역이 없습니다. 안전해요</td></tr>`;
+            tbody.innerHTML = `
+                <div class="log-row" style="grid-template-columns: 1fr; text-align: center; padding: 40px;">
+                    <span class="detail-text">외부로 유출된 흔적이 없습니다. 안전합니다!</span>
+                </div>
+            `;
         }
 
+        const now = new Date();
+        const timeString = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        document.getElementById('lastScanTime').innerText = `마지막 스캔 · ${timeString} KST`;
+
     } catch (error) {
-        document.getElementById('loading').innerHTML = "<span style='color: #4E0A0B;'>서버 연결 실패 -> 파이썬 백엔드 확인</span>";
+        document.getElementById('resultBody').innerHTML = `
+            <div class="log-row" style="grid-template-columns: 1fr; text-align: center; padding: 40px;">
+                <span class="detail-text" style="color: var(--coral);">서버 연결 실패 -> 백엔드 확인</span>
+            </div>
+        `;
+    } finally {
+        btn.classList.remove('loading');
+        btn.innerHTML = '모니터링 시작';
+        document.getElementById('liveStatus').innerHTML = `<span class="dot"></span>실시간 모니터링 대기 중`;
     }
 });

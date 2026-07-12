@@ -118,7 +118,7 @@ document.getElementById('scanBtn').addEventListener('click', async () => {
             });
             resultBox.innerHTML = htmlContent;
         } else {
-            resultBox.innerHTML = "안전합니다^^ 발견된 위협이 없습니다.";
+            resultBox.innerHTML = "안전해요^^ 발견된 위협이 없습니다.";
         }
     } catch (error) {
         resultBox.innerHTML = "<span style='color: #E38792;'>서버 연결 실패 -> 백엔드가 켜져있는지 확인</span>";
