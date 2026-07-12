@@ -1,12 +1,18 @@
 import os
 import boto3
 import hashlib
+import asyncio
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from boto3.dynamodb.conditions import Key
 from dotenv import load_dotenv
 from pydantic import BaseModel
+
+from backend.collectors.hibp import search_breach
+from backend.collectors.google import search_google_leaks
+from backend.collectors.github import search_github_leaks
+from backend.collectors.telegram import scrape_telegram
 
 load_dotenv()
 
@@ -35,23 +41,28 @@ dynamodb = boto3.resource(
 def read_root():
     return {"status": "ok", "message": "SYMSYM API 서버 정상 작동"}
 
-# 2. 실시간 위협 데이터 조회 API
+# 2. 실시간 위협 데이터 조회 API 
 @app.get("/api/alerts/{email}")
-def get_user_alerts(email: str):
-    # 입력된 도메인/이메일을 파티션 키로 하여 symsym-threat-events 테이블에서 실시간 유출 내역을 쿼리
+async def get_user_alerts(email: str):  
+    print(f"\n[딥스캔 시작] 클라이언트에서 '{email}' 조회를 요청했습니다.")
+    
+    print("1. HIBP, Google, GitHub 스캔 중...")
+    search_breach(email)
+    search_google_leaks(email)
+    search_github_leaks(email)
+    
+    print("2. 텔레그램 채널 스캔 중...")
+    await scrape_telegram(email)  # 텔레그램은 비동기이므로 await 대기
+
+    print(f"[{email}] 봇 수집 및 적재 완료 -> DB 결과 가져옴\n")
+
     try:
-        # 1. 대상 테이블 호출
         table = dynamodb.Table('symsym-threat-events')
-        
-        # 2. DynamoDB Query 실행 (email이 일치하는 데이터 가져오기)
         response = table.query(
             KeyConditionExpression=Key('email').eq(email)
         )
-        
-        # 3. 데이터 추출
         items = response.get('Items', [])
         
-        # 4. 프론트엔드가 요구하는 규격으로 가공하여 전달
         alerts_list = []
         for item in items:
             alerts_list.append({
@@ -62,7 +73,7 @@ def get_user_alerts(email: str):
             
         return {
             "email": email,
-            "message": f"AWS에서 {email}에 대한 위협 데이터를 실시간으로 조회 완료",
+            "message": "딥스캔 완료",
             "alerts": alerts_list
         }
         

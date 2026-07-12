@@ -1,97 +1,51 @@
 import os
-import time
+import uuid
 import requests
+import dataclasses
 from datetime import datetime
 from dotenv import load_dotenv
 
 from backend.models.threat_event import ThreatEvent
 from backend.services.aws_db import save_to_dynamodb
 from backend.utils.mapper import threat_event_to_dynamodb_item
+from backend.services.risk_service import calculate_risk
+from backend.models.user import User
+from backend.services.alert_service import create_alerts
 
 load_dotenv()
 
 TOKEN = os.getenv("GITHUB_API_TOKEN")
 
-# [교수님 피드백 1] 타겟 확장
-TARGET_ORGS = ["samsung", "ahnlab", "duksung.ac.kr", "go.kr"]
-
-# [교수님 피드백 2] 키워드 매칭
-THREAT_KEYWORDS = ["internal", "confidential", "dump", "credentials"]
-
-def search_github_leaks():
-    if not TOKEN:
-        print("[오류] GITHUB_API_TOKEN이 없음 -> env 확인")
-        return []
-
-    # [교수님 피드백 3] 'search/code'에서 'search/repositories'로 변경
+def search_github_leaks(target: str):
+    if not TOKEN: return []
     url = "https://api.github.com/search/repositories"
-    
-    headers = {
-        "Authorization": f"Bearer {TOKEN}",
-        "Accept": "application/vnd.github+json"
-    }
-
+    headers = {"Authorization": f"Bearer {TOKEN}", "Accept": "application/vnd.github+json"}
     all_events = []
 
-    for org in TARGET_ORGS:
-        for keyword in THREAT_KEYWORDS:
-            search_query = f'"{org}" "{keyword}"'
-            print(f"[GitHub] '{search_query}' 검색 중")
-            
-            params = {
-                "q": search_query, 
-                "per_page": 3  # 상위 3개 위험 레포지토리만 추출 (API 한도 및 시연용)
-            }
-
-            try:
-                response = requests.get(url, headers=headers, params=params, timeout=10)
-
-                if response.status_code == 403:
-                    print("GitHub API 속도 제한 -> 잠시 대기")
-                    time.sleep(10)
-                    continue
-                elif response.status_code != 200:
-                    print(f"GitHub API 에러: {response.text}")
-                    continue
-
-                data = response.json()
+    print(f"[GitHub] '{target}' 실시간 검색 중")
+    try:
+        response = requests.get(url, headers=headers, params={"q": f'"{target}"', "per_page": 3}, timeout=10)
+        if response.status_code == 200:
+            for item in response.json().get("items", []):
+                event = ThreatEvent(
+                    source="GitHub", email=target, leaked_keyword="N/A", repository=item.get("full_name"),
+                    url=item.get("html_url"), description=f"[저장소 유출] {item.get('description', '')[:150]}",
+                    detected_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"), is_confirmed=False
+                )
                 
-                for item in data.get("items", []):
-                    detected_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    repo_name = item.get("full_name")
-                    description = item.get("description") or "설명 없음"
-                    repo_url = item.get("html_url")
+                event = calculate_risk([event])[0]
+                if not hasattr(event, 'event_id') or not event.event_id:
+                    event.event_id = str(uuid.uuid4())
 
-                    event = ThreatEvent(
-                        source="GitHub",
-                        email=org,             # AWS DB 저장을 위해 기관명을 기준으로 사용
-                        leaked_keyword=keyword,
-                        repository=repo_name,
-                        url=repo_url,
-                        # threat_level 하드코딩 삭제 (risk_service가 할 일)
-                        description=f"[저장소 유출] {description[:150]}",
-                        detected_at=detected_at,
-                        is_confirmed=False
-                    )
+                all_events.append(event)
+                save_to_dynamodb('symsym-threat-events', threat_event_to_dynamodb_item(event))
 
-                    all_events.append(event)
-
-                    # AWS DynamoDB 규격화 및 자동 적재
-                    item_to_save = threat_event_to_dynamodb_item(event)
-                    save_to_dynamodb('symsym-threat-events', item_to_save)
-
-                time.sleep(3)
-
-            except Exception as e:
-                print(f"GitHub 검색 중 에러 발생: {e}")
-
+                alerts = create_alerts(User(email=target), [event])
+                for alert in alerts:
+                    alert_item = dataclasses.asdict(alert) if hasattr(alert, '__dataclass_fields__') else alert.dict()
+                    if 'sent_at' in alert_item and not isinstance(alert_item['sent_at'], str):
+                        alert_item['sent_at'] = alert_item['sent_at'].strftime("%Y-%m-%d %H:%M:%S")
+                    save_to_dynamodb('symsym-alerts', alert_item)
+    except Exception as e:
+        print(f"GitHub 에러: {e}")
     return all_events
-
-if __name__ == "__main__":
-    print("깃허브 - 기업 기밀 유출 스캔 시작\n")
-    events = search_github_leaks()
-    
-    if not events:
-        print("타겟 기관의 기밀이 유출된 깃허브 저장소가 없음")
-    else:
-        print(f"\n총 {len(events)}건의 위험 저장소를 찾아 AWS에 적재 완료")

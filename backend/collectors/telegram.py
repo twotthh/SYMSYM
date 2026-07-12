@@ -1,5 +1,7 @@
 import os
+import uuid
 import asyncio
+import dataclasses
 from datetime import datetime
 from dotenv import load_dotenv
 from telethon.sync import TelegramClient
@@ -7,78 +9,54 @@ from telethon.sync import TelegramClient
 from backend.models.threat_event import ThreatEvent
 from backend.services.aws_db import save_to_dynamodb
 from backend.utils.mapper import threat_event_to_dynamodb_item
+from backend.services.risk_service import calculate_risk
+from backend.models.user import User
+from backend.services.alert_service import create_alerts
 
 load_dotenv()
 
 API_ID = int(os.getenv("TELEGRAM_API_ID").strip().strip("'").strip('"'))
 API_HASH = os.getenv("TELEGRAM_API_HASH").strip().strip("'").strip('"')
 
-TARGET_CHANNELS = [
-    'test99026',           
-    'FalconFeedsio',       
-    'vxunderground',       
-    'thehackersnews',        
-    'bleepingcomputer'     
-]
+TARGET_CHANNELS = ['test99026', 'FalconFeedsio', 'vxunderground', 'thehackersnews']
 
-# B2B 기업 타겟 도메인 및 키워드 추가
-TARGET_DOMAINS = ["samsung.com", "ahnlab.com", "go.kr", "duksung.ac.kr"]
-THREAT_KEYWORDS = ["db dump", "internal source", "confidential", "cv", "leak", "password"]
-
-async def scrape_telegram():
-    print("텔레그램 - 기업 기밀 유출 감시 및 AWS 적재 시작\n")
+async def scrape_telegram(target: str):
+    print(f"[텔레그램] '{target}' 실시간 감시 시작\n")
     client = TelegramClient('symsym_session', API_ID, API_HASH)
     await client.start()
     
     try:
         for channel in TARGET_CHANNELS:
-            print(f"[@{channel}] 채널 탐색 중")
-            
             try:
-                messages = await client.get_messages(channel, limit=15)
-                
+                # 텔레그램 자체 검색 기능(search)을 활용해 타겟 이메일이 있는 글만 5개 가져옴
+                messages = await client.get_messages(channel, search=target, limit=5)
                 for msg in messages:
-                    if not msg.text:
-                        continue
-                        
-                    msg_text_lower = msg.text.lower()
+                    if not msg.text: continue
                     
-                    # 도메인과 위협 키워드가 모두 포함된 메시지만 추출
-                    for domain in TARGET_DOMAINS:
-                        if domain in msg_text_lower:
-                            for keyword in THREAT_KEYWORDS:
-                                if keyword in msg_text_lower:
-                                    print(f"[@{channel}] '{domain}' 관련 '{keyword}' 유출 정황 감지!")
-                                    
-                                    detected_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                                    url = f"https://t.me/{channel}/{msg.id}"
-                                    
-                                    event = ThreatEvent(
-                                        source='Telegram',
-                                        email=domain,          # 타겟 도메인을 기준으로 기록
-                                        leaked_keyword=keyword,
-                                        url=url,
-                                        description=msg.text[:200] + "...", 
-                                        detected_at=detected_at,
-                                        is_confirmed=False
-                                    )
-                                    
-                                    item_to_save = threat_event_to_dynamodb_item(event)
-                                    save_to_dynamodb('symsym-threat-events', item_to_save)
-                                    
-                                    # 하나의 메시지에서 같은 도메인  중복 저장 방지
-                                    break 
-                                    
+                    print(f"[@{channel}] '{target}' 관련 내용 발견")
+                    event = ThreatEvent(
+                        source='Telegram', email=target, leaked_keyword="N/A",
+                        url=f"https://t.me/{channel}/{msg.id}", description=msg.text[:200] + "...", 
+                        detected_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"), is_confirmed=False
+                    )
+                    
+                    event = calculate_risk([event])[0]
+                    if not hasattr(event, 'event_id') or not event.event_id:
+                        event.event_id = str(uuid.uuid4())
+                    
+                    item_to_save = threat_event_to_dynamodb_item(event)
+                    save_to_dynamodb('symsym-threat-events', item_to_save)
+                    
+                    alerts = create_alerts(User(email=target), [event])
+                    for alert in alerts:
+                        alert_item = dataclasses.asdict(alert) if hasattr(alert, '__dataclass_fields__') else alert.dict()
+                        if 'sent_at' in alert_item and not isinstance(alert_item['sent_at'], str):
+                            alert_item['sent_at'] = alert_item['sent_at'].strftime("%Y-%m-%d %H:%M:%S")
+                        save_to_dynamodb('symsym-alerts', alert_item)
+                        
             except Exception as e:
-                print(f"[@{channel}] 접근 불가: {e}")
-            
-            await asyncio.sleep(3) 
-            
+                print(f"[@{channel}] 접근 불가 : {e}")
     except Exception as e:
-        print(f"전체 collector 구동 에러: {e}")
+        print(f"텔레그램 구동 에러 : {e}")
     finally:
         await client.disconnect()
-        print("이번 사이클 텔레그램 탐색 및 AWS 적재 완료")
-
-if __name__ == "__main__":
-    asyncio.run(scrape_telegram())

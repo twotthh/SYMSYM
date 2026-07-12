@@ -1,6 +1,8 @@
+import dataclasses
 import requests
 from datetime import datetime
 from backend.models.asm_asset import AsmAsset
+from backend.services.aws_db import save_to_dynamodb
 
 def scan_subdomains(domain="duksung.ac.kr"):
     print(f"HackerTarget 서브도메인 탐색 시작: {domain}")
@@ -31,9 +33,13 @@ def scan_subdomains(domain="duksung.ac.kr"):
                     source="HackerTarget",
                     ip=ip,
                     domain=host,
-                    last_scan=datetime.now()
+                    last_scan=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 )
                 assets.append(asset)
+                
+                item_to_save = {k: v for k, v in dataclasses.asdict(asset).items() if v is not None}
+                save_to_dynamodb('symsym-asm-assets', item_to_save)
+                
                 count += 1
                 
         return assets
@@ -48,5 +54,4 @@ if __name__ == '__main__':
     if not results:
         print("발견된 인프라 정보가 없음")
     else:
-        for res in results:
-            print(res)
+        print(f"\n총 {len(results)}건의 서브도메인 인프라 정보를 AWS에 저장 완료")

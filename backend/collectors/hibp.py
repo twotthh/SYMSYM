@@ -1,134 +1,61 @@
 import os
 import time
+import uuid
 import requests
+import dataclasses
 from datetime import datetime
 from dotenv import load_dotenv
 
 from backend.models.threat_event import ThreatEvent
 from backend.services.aws_db import save_to_dynamodb
 from backend.utils.mapper import threat_event_to_dynamodb_item
+from backend.services.risk_service import calculate_risk
+from backend.models.user import User
+from backend.services.alert_service import create_alerts
 
 load_dotenv()
-
 API_KEY = os.getenv("HIBP_API_KEY")
-TABLE_NAME = "symsym-threat-events" #테이블 명 변경 시 해당 코드 수정해서 사용
-
 
 def search_breach(email: str):
-    """
-    HIBP에서 이메일 유출 정보를 조회하여
-    ThreatEvent 생성 후 DynamoDB에 저장한다.
-
-    Return:
-        List[ThreatEvent]
-    """
-
-    if not API_KEY:
-        print("[오류] HIBP_API_KEY가 없습니다. .env 파일을 확인하세요.")
-        return []
-
-    url = (
-        f"https://haveibeenpwned.com/api/v3/"
-        f"breachedaccount/{email}?truncateResponse=false"
-    )
-
-    headers = {
-        "hibp-api-key": API_KEY,
-        "user-agent": "symsym-alert-extension"
-    }
-
+    if not API_KEY: return []
+    url = f"https://haveibeenpwned.com/api/v3/breachedaccount/{email}?truncateResponse=false"
+    
     try:
-        # 1. HIBP API 호출
-        response = requests.get(
-            url,
-            headers=headers,
-            timeout=10
-        )
-
-        # 2. 응답 상태 확인
-        if response.status_code == 404:
-            return []
-
-        if response.status_code == 401:
-            print("[오류] HIBP API 키가 유효하지 않습니다.")
-            return []
-
-        if response.status_code == 429:
-            print("[경고] API 요청 한도를 초과했습니다.")
-            return []
-
-        if response.status_code != 200:
-            print(f"[오류] HIBP API 응답 실패 (Status: {response.status_code})")
-            return []
-
-        breaches = response.json()
+        response = requests.get(url, headers={"hibp-api-key": API_KEY, "user-agent": "symsym-alert-extension"}, timeout=10)
+        if response.status_code != 200: return []
+        
         events = []
-
-        # 3. HIBP 응답을 ThreatEvent 모델로 변환
-        for breach in breaches:
-
+        for breach in response.json():
             breach_date = breach.get("BreachDate")
-
-            detected_at = (
-                breach_date
-                if breach_date
-                else datetime.now().strftime("%Y-%m-%d")
-            )
-
             event = ThreatEvent(
-                source="HIBP",
-                email=email,
-                breach_name=breach.get("Name"),
-
-                # TODO:
-                # 현재는 임시로 HIGH를 사용
-                # RiskService 구현 후 Collector에서는 threat_level을 설정하지 않도록 변경 예정
-                threat_level="HIGH",
-
+                source="HIBP", email=email, breach_name=breach.get("Name"),
                 description=breach.get("Description"),
-                detected_at=detected_at,
-                is_confirmed=False
+                detected_at=breach_date if breach_date else datetime.now().strftime("%Y-%m-%d"), is_confirmed=False
             )
 
+            # 1. 채점 및 ID
+            event = calculate_risk([event])[0]
+            if not hasattr(event, 'event_id') or not event.event_id:
+                event.event_id = str(uuid.uuid4())
+
+            # 2. Events 저장
             events.append(event)
+            save_to_dynamodb("symsym-threat-events", threat_event_to_dynamodb_item(event))
 
-            # 4. ThreatEvent → DynamoDB 저장 형식으로 변환
-            #mapper.py에서 저장함수 끌어옴
-            #GitHub,Telegram 둘 다 해당 함수 사용하여 DB에 저장 가능
-            item = threat_event_to_dynamodb_item(event) 
-
-            # 5. DynamoDB 저장
-            save_to_dynamodb(
-                TABLE_NAME,
-                item
-            )
-
+            # 3. Alerts 저장
+            alerts = create_alerts(User(email=email), [event])
+            for alert in alerts:
+                alert_item = dataclasses.asdict(alert) if hasattr(alert, '__dataclass_fields__') else alert.dict()
+                if 'sent_at' in alert_item and not isinstance(alert_item['sent_at'], str):
+                    alert_item['sent_at'] = alert_item['sent_at'].strftime("%Y-%m-%d %H:%M:%S")
+                save_to_dynamodb('symsym-alerts', alert_item)
+                print(f"[긴급 알림] '{email}' 관리자에게 {alert.threat_level} 경고 적재 완료")
         return events
-
     except Exception as e:
-        print(f"[오류] HIBP 스캔 중 문제가 발생했습니다: {e}")
+        print(f"HIBP 스캔 에러 : {e}")
         return []
-
 
 if __name__ == "__main__":
-
-    print("===== HIBP 데이터 수집 및 AWS 저장 테스트 =====\n")
-
-    test_emails = [
-        "test@duksung.ac.kr",
-        "myemail@gmail.com"
-    ]
-
-    for email in test_emails:
-
-        print(f"[{email}] 유출 정보 조회 중...")
-
-        events = search_breach(email)
-
-        if not events:
-            print("유출 내역이 없습니다.\n")
-
-        else:
-            print(f"{len(events)}건의 유출 정보를 DynamoDB에 저장했습니다.\n")
-
+    for email in ["samsung.com", "ahnlab.com", "duksung.ac.kr"]:
+        search_breach(email)
         time.sleep(2)
