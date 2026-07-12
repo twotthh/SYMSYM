@@ -10,13 +10,13 @@ window.onload = () => {
 
 document.getElementById('analyzeBtn').addEventListener('click', async () => {
     const target = document.getElementById('targetInput').value.trim();
-    if (!target) return alert("분석할 이메일이나 도메인을 입력해주세요!");
+    if (!target) return alert("모니터링할 이메일이나 도메인을 입력해주세요!");
 
     const btn = document.getElementById('analyzeBtn');
     btn.classList.add('loading');
-    btn.innerHTML = '스캔 중···';
+    btn.innerHTML = '모니터링 중···';
     
-    document.getElementById('liveStatus').innerHTML = `<span class="dot"></span>실시간 딥스캔 진행 중...`;
+    document.getElementById('liveStatus').innerHTML = `<span class="dot"></span>실시간 모니터링 진행 중...`;
 
     try {
         const response = await fetch(`http://127.0.0.1:8000/api/alerts/${target}`);

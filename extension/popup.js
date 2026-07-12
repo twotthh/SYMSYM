@@ -93,7 +93,7 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 });
 
 
-// [조회] 버튼 클릭 이벤트 (실시간 딥스캔 API 연결)
+// [조회] 버튼 클릭 이벤트 (실시간 모니터링 API 연결)
 document.getElementById('scanBtn').addEventListener('click', async () => {
     const target = document.getElementById('emailInput').value.trim();
     const resultBox = document.getElementById('result-box');
@@ -101,7 +101,7 @@ document.getElementById('scanBtn').addEventListener('click', async () => {
 
     chrome.storage.local.set({ lastSearchedTarget: target });
 
-    resultBox.innerHTML = "딥스캔 진행 중... (최대 10~15초 소요)";
+    resultBox.innerHTML = "모니터링 진행 중... (최대 10~15초 소요)";
     
     try {
         const response = await fetch(`http://127.0.0.1:8000/api/alerts/${target}`);
