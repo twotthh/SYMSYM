@@ -2,13 +2,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
-
 @dataclass
 class ThreatEvent:
-    """
-    OSINT 기반 위협 이벤트 모델
-    (HIBP, GitHub, Telegram 공통 사용)
-    """
 
     # 데이터 출처
     source: str

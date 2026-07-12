@@ -22,12 +22,7 @@ API_KEY = os.getenv("HIBP_API_KEY")
 THREAT_EVENT_TABLE = "symsym-threat-events"
 ALERT_TABLE = "symsym-alerts"
 
-
 def search_breach(email: str):
-    """
-    HIBP에서 이메일 유출 정보를 조회하여
-    위험도를 계산하고 ThreatEvent 및 Alert를 DynamoDB에 저장한다.
-    """
 
     if not API_KEY:
         print("[오류] HIBP_API_KEY가 없습니다.")
@@ -135,25 +130,6 @@ def search_breach(email: str):
     except Exception as e:
         print(f"[오류] HIBP 스캔 중 문제가 발생했습니다: {e}")
         return []
-
-
-# if __name__ == "__main__":
-
-#     test_targets = [
-#         "실제로_테스트할_이메일@example.com"
-#     ]
-
-#     for email in test_targets:
-#         print(f"[HIBP] '{email}' 유출 정보 조회 시작")
-
-#         events = search_breach(email)
-
-#         if not events:
-#             print("[HIBP] 유출 내역이 없거나 조회 결과가 없습니다.\n")
-#         else:
-#             print(f"[HIBP] 총 {len(events)}건 처리 완료\n")
-
-#         time.sleep(2)
 
 if __name__ == "__main__":
 

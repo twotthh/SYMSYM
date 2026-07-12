@@ -1,17 +1,11 @@
 from typing import List
-
 from backend.models.user import User
 from backend.models.threat_event import ThreatEvent
-
 
 def compare_user_with_events(
     user: User,
     events: List[ThreatEvent]
 ) -> List[ThreatEvent]:
-    """
-    사용자 정보와 ThreatEvent를 비교하여
-    관련된 이벤트만 반환
-    """
 
     matched_events = []
 

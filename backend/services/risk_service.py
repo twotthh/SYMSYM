@@ -1,16 +1,9 @@
-"""
-ThreatEvent 위험도 계산 서비스
-"""
-
 from collections import Counter
 from typing import List
-
 from backend.models.threat_event import ThreatEvent
 from backend.utils.risk_rules import RISK_LEVEL, RISK_SCORE
 
-
 HIGH_KEYWORDS = {
-
     "password": "PASSWORD",
     "passwd": "PASSWORD",
 
@@ -25,10 +18,7 @@ HIGH_KEYWORDS = {
 
 
 def calculate_risk(events: List[ThreatEvent]) -> List[ThreatEvent]:
-    """
-    ThreatEvent 위험도 계산
-    """
-
+    
     # 같은 이메일/키워드가 여러 Source에서 발견됐는지 확인
     indicators = []
 

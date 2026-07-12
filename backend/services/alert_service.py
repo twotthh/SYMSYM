@@ -5,14 +5,10 @@ from backend.models.alert import Alert
 from backend.models.user import User
 from backend.models.threat_event import ThreatEvent
 
-
 def create_alerts(
     user: User,
     events: List[ThreatEvent]
 ) -> List[Alert]:
-    """
-    ThreatEvent를 Alert로 변환
-    """
 
     alerts = []
 
@@ -50,9 +46,7 @@ def create_alerts(
 
             # 읽음 여부
             is_read=False
-
         )
-
         alerts.append(alert)
 
     return alerts

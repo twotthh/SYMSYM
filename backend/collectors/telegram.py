@@ -40,13 +40,7 @@ TARGET_CHANNELS = [
     "thehackersnews"
 ]
 
-
 async def scrape_telegram(target: str):
-    """
-    Telegram 채널에서 대상 키워드를 검색하여
-    위험도를 계산하고 ThreatEvent 및 Alert를 DynamoDB에 저장한다.
-    """
-
     print(f"[텔레그램] '{target}' 실시간 감시 시작\n")
 
     client = TelegramClient(

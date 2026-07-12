@@ -7,7 +7,6 @@ from backend.utils.mapper import asm_asset_to_dynamodb_item
 
 TABLE_NAME = "symsym-asm-assets"
 
-
 def scan_subdomains(domain="duksung.ac.kr"):
     print(f"HackerTarget 서브도메인 탐색 시작: {domain}")
 

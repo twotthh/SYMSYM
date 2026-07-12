@@ -2,13 +2,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Optional
 
-
 @dataclass
 class AsmAsset:
-    """
-    ASM(Attack Surface Management) 자산 모델
-    (Censys, Shodan 공통 사용 ver.)
-    """
 
     # 데이터 출처
     source: str

@@ -1,13 +1,9 @@
 from dataclasses import dataclass
 from datetime import datetime
 
-
 @dataclass
 class Alert:
-    """
-    사용자에게 전달되는 알림 모델
-    """
-
+    
     # 알림을 받을 사용자
     user_email: str
 

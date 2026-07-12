@@ -29,7 +29,5 @@ student@duksung.ac.kr:mysecret!@
 test@duksung.ac.kr:password
 """
 
-# 로직 실행
 result = detect_leak(telegram_message)
 print(result) 
-# 출력 결과: {'type': 'Combo List', 'data': ['student@duksung.ac.kr:mysecret!@']} (test는 걸러짐)

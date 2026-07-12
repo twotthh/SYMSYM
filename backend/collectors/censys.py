@@ -17,15 +17,7 @@ HEADERS = {
     "Accept": "application/json"
 }
 
-
 def get_host(host_id: str):
-    """
-    Censys에서 IP 기반 인프라 정보를 조회하여
-    AsmAsset 생성 후 DynamoDB에 저장한다.
-
-    Return:
-        AsmAsset | None
-    """
 
     url = f"https://api.platform.censys.io/v3/global/asset/host/{host_id}"
 
@@ -85,7 +77,6 @@ def get_host(host_id: str):
     except Exception as e:
         print(f"[오류] Censys 스캔 중 문제가 발생했습니다: {e}")
         return None
-
 
 if __name__ == "__main__":
     print("===== Censys 인프라 스캔 및 AWS 저장 테스트 =====\n")

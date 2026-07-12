@@ -21,12 +21,7 @@ TOKEN = os.getenv("GITHUB_API_TOKEN")
 THREAT_EVENT_TABLE = "symsym-threat-events"
 ALERT_TABLE = "symsym-alerts"
 
-
 def search_github_leaks(target: str):
-    """
-    GitHub에서 대상 키워드를 검색하여
-    위험도를 계산하고 ThreatEvent 및 Alert를 DynamoDB에 저장한다.
-    """
 
     if not TOKEN:
         print("[오류] GITHUB_API_TOKEN이 없습니다.")

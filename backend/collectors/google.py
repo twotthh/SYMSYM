@@ -23,13 +23,8 @@ GOOGLE_SEARCH_CX = os.getenv("GOOGLE_SEARCH_CX")
 THREAT_EVENT_TABLE = "symsym-threat-events"
 ALERT_TABLE = "symsym-alerts"
 
-
 def search_google_leaks(target: str):
-    """
-    Google Custom Search를 통해 유출 의심 정보를 검색하여
-    위험도를 계산하고 ThreatEvent 및 Alert를 DynamoDB에 저장한다.
-    """
-
+    
     if not GOOGLE_API_KEY or not GOOGLE_SEARCH_CX:
         print("[오류] Google API 설정값이 없습니다.")
         return []
@@ -125,7 +120,6 @@ def search_google_leaks(target: str):
     except Exception as e:
         print(f"[오류] Google 검색 중 문제가 발생했습니다: {e}")
         return []
-
 
 if __name__ == "__main__":
 

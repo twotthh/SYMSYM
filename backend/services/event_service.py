@@ -1,11 +1,10 @@
 from backend.collectors.shodan import get_host as shodan_get_host
 from backend.collectors.censys import get_host as censys_get_host
 
-
 class EventService:
-
+    
     def collect_asm(self, ip):
-
+        
         assets = []
 
         shodan_asset = shodan_get_host(ip)
@@ -17,7 +16,7 @@ class EventService:
             assets.append(censys_asset)
 
         return assets
-  
+    
 if __name__ == "__main__":
 
     service = EventService()
