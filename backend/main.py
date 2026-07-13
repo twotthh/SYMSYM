@@ -44,7 +44,7 @@ def read_root():
 # 2. 실시간 위협 데이터 조회 API 
 @app.get("/api/alerts/{email}")
 async def get_user_alerts(email: str):  
-    print(f"\n[딥스캔 시작] 클라이언트에서 '{email}' 조회를 요청했습니다.")
+    print(f"\n[모니터링 시작] 클라이언트에서 '{email}' 조회를 요청했습니다.")
     
     print("1. HIBP, Google, GitHub 스캔 중...")
     search_breach(email)
@@ -73,7 +73,7 @@ async def get_user_alerts(email: str):
             
         return {
             "email": email,
-            "message": "딥스캔 완료",
+            "message": "모니터링 완료",
             "alerts": alerts_list
         }
         

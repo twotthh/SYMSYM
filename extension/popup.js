@@ -93,30 +93,50 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 });
 
 
-// [조회] 버튼 클릭 이벤트 (실시간 모니터링 API 연결)
+// 5. [조회] 버튼 클릭 이벤트
 document.getElementById('scanBtn').addEventListener('click', async () => {
     const target = document.getElementById('emailInput').value.trim();
     const resultBox = document.getElementById('result-box');
+    const dashboardBtn = document.getElementById('dashboardBtn'); // 고정된 검은색 버튼 가져오기
+
     if (!target) { resultBox.innerHTML = "도메인/이메일을 입력해주세요."; return; }
 
     chrome.storage.local.set({ lastSearchedTarget: target });
 
     resultBox.innerHTML = "모니터링 진행 중... (최대 10~15초 소요)";
     
+    // 버튼 텍스트 초기화 (스캔 중일 때는 원래 텍스트 유지)
+    if (dashboardBtn) dashboardBtn.innerHTML = `대시보드 보기 &rarr;`;
+
     try {
         const response = await fetch(`http://127.0.0.1:8000/api/alerts/${target}`);
         const data = await response.json();
 
         if (data.alerts && data.alerts.length > 0) {
+            
+            // 위협도 내림차순 정렬
+            const severityScore = { "CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1 };
+            data.alerts.sort((a, b) => (severityScore[b.threat_level] || 0) - (severityScore[a.threat_level] || 0));
+
+            const topAlerts = data.alerts.slice(0, 7);
+
             let htmlContent = `<strong>[${data.email}]</strong><br>총 ${data.alerts.length}건의 위협이 발견되었습니다.<hr style="border: 0; border-top: 1px solid rgba(78, 10, 11, 0.1); margin: 8px 0;">`;
-            data.alerts.forEach(alert => {
+            
+            topAlerts.forEach(alert => {
                 htmlContent += `
                     <div class="threat-item">
                         <span class="${alert.threat_level}">[${alert.threat_level}]</span> <strong>출처: ${alert.source}</strong><br>
                         <span style="color: #666; font-size: 12px;">${alert.description}</span>
                     </div>`;
             });
+
             resultBox.innerHTML = htmlContent;
+
+            if (data.alerts.length > 7 && dashboardBtn) {
+                const extraCount = data.alerts.length - 7;
+                dashboardBtn.innerHTML = `대시보드에서 전체 위협 보기 (+${extraCount}건) &rarr;`;
+            }
+
         } else {
             resultBox.innerHTML = "안전해요^^ 발견된 위협이 없습니다.";
         }
@@ -125,7 +145,7 @@ document.getElementById('scanBtn').addEventListener('click', async () => {
     }
 });
 
-// [대시보드 보기] 버튼 이벤트
+// 6. 기존 [대시보드 보기] 정적 버튼 이벤트 (HTML에 원래 있던 버튼용)
 document.getElementById('dashboardBtn').addEventListener('click', () => {
     const target = document.getElementById('emailInput').value.trim();
     let targetUrl = 'dashboard.html';
