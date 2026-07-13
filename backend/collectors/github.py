@@ -1,6 +1,7 @@
 import os
 import uuid
 import requests
+import time
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -22,12 +23,12 @@ THREAT_EVENT_TABLE = "symsym-threat-events"
 ALERT_TABLE = "symsym-alerts"
 
 def search_github_leaks(target: str):
-
     if not TOKEN:
         print("[오류] GITHUB_API_TOKEN이 없습니다.")
         return []
 
-    url = "https://api.github.com/search/repositories"
+    repo_url = "https://api.github.com/search/repositories"
+    code_url = "https://api.github.com/search/code"
 
     headers = {
         "Authorization": f"Bearer {TOKEN}",
@@ -35,83 +36,90 @@ def search_github_leaks(target: str):
     }
 
     all_events = []
+    processed_repos = set()  
 
-    print(f"[GitHub] '{target}' 실시간 검색 중")
+    print(f"[GitHub] '{target}' 기반 2단계 정밀 모니터링 시작")
 
     try:
-        # 1. GitHub API 호출
-        response = requests.get(
-            url,
+        # 1. 리포지토리 검색 (이름이나 설명에 키워드가 있는 경우)
+        repo_response = requests.get(
+            repo_url,
             headers=headers,
-            params={
-                "q": f'"{target}"',
-                "per_page": 3
-            },
+            params={"q": f'"{target}"', "per_page": 3},
             timeout=10
         )
 
-        # 2. 응답 상태 확인
-        if response.status_code != 200:
-            print(
-                f"[오류] GitHub API 응답 실패 "
-                f"(Status: {response.status_code})"
-            )
-            return []
+        if repo_response.status_code == 200:
+            for item in repo_response.json().get("items", []):
+                repo_full_name = item.get("full_name")
+                processed_repos.add(repo_full_name)  # 1단계에서 잡힌 저장소 등록
 
-        # 3. GitHub 응답을 ThreatEvent 모델로 변환
-        for item in response.json().get("items", []):
-
-            event = ThreatEvent(
-                source="GitHub",
-
-                # ThreatEvent 생성 시 고유 ID 생성
-                event_id=str(uuid.uuid4()),
-
-                email=target,
-                leaked_keyword="N/A",
-                repository=item.get("full_name"),
-                url=item.get("html_url"),
-                description=(
-                    f"[저장소 유출] "
-                    f"{item.get('description', '')[:150]}"
-                ),
-                detected_at=datetime.now().strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                ),
-                is_confirmed=False
-            )
-
-            # 4. RiskService를 이용하여 위험도 계산
-            event = calculate_risk([event])[0]
-
-            all_events.append(event)
-
-            # 5. ThreatEvent를 공통 Mapper로 변환 후 DynamoDB 저장
-            event_item = threat_event_to_dynamodb_item(event)
-
-            save_to_dynamodb(
-                THREAT_EVENT_TABLE,
-                event_item
-            )
-
-            # 6. ThreatEvent를 기반으로 Alert 생성
-            alerts = create_alerts(
-                User(email=target),
-                [event]
-            )
-
-            # 7. Alert를 공통 Mapper로 변환 후 DynamoDB 저장
-            for alert in alerts:
-
-                alert_item = alert_to_dynamodb_item(alert)
-
-                save_to_dynamodb(
-                    ALERT_TABLE,
-                    alert_item
+                event = ThreatEvent(
+                    source="GitHub",
+                    event_id=str(uuid.uuid4()),
+                    email=target,
+                    leaked_keyword="Repository Match",
+                    repository=repo_full_name,
+                    url=item.get("html_url"),
+                    description=f"[저장소 노출] {item.get('description', '')[:150]}",
+                    detected_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    is_confirmed=False
                 )
+                
+                # 위험도 채점, 매핑 및 DB 저장
+                event = calculate_risk([event])[0]
+                all_events.append(event)
+                save_to_dynamodb(THREAT_EVENT_TABLE, threat_event_to_dynamodb_item(event))
+                
+                # 알림 생성 및 저장
+                alerts = create_alerts(User(email=target), [event])
+                for alert in alerts:
+                    save_to_dynamodb(ALERT_TABLE, alert_to_dynamodb_item(alert))
+
+        time.sleep(1)
+
+        # 2. 소스코드 검색 (리포지토리엔 없지만 코드 텍스트 내부에 숨어있는 경우)
+        # 전 세계 퍼블릭 코드 전체를 대상으로 타겟 키워드가 박힌 소스파일 검색
+        code_response = requests.get(
+            code_url,
+            headers=headers,
+            params={"q": f'"{target}"', "per_page": 5},
+            timeout=10
+        )
+
+        if code_response.status_code == 200:
+            for item in code_response.json().get("items", []):
+                repo_info = item.get("repository", {})
+                repo_full_name = repo_info.get("full_name")
+
+                # 이미 1단계(리포지토리 이름 검색)에서 처리된 저장소라면 중복 저장 패스
+                if repo_full_name in processed_repos:
+                    continue
+
+                event = ThreatEvent(
+                    source="GitHub",
+                    event_id=str(uuid.uuid4()),
+                    email=target,
+                    leaked_keyword="Code Content Match",
+                    repository=repo_full_name,
+                    url=item.get("html_url"),  # 실제 유출된 소스코드 파일의 직접 링크
+                    description=f"[소스코드 내부 유출] 파일명 : {item.get('name')} (해당 소스코드 내부에 키워드 존재 파악)",
+                    detected_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    is_confirmed=False
+                )
+
+                # 위험도 채점, 매핑 및 DB 저장
+                event = calculate_risk([event])[0]
+                all_events.append(event)
+                save_to_dynamodb(THREAT_EVENT_TABLE, threat_event_to_dynamodb_item(event))
+
+                # 알림 생성 및 저장
+                alerts = create_alerts(User(email=target), [event])
+                for alert in alerts:
+                    save_to_dynamodb(ALERT_TABLE, alert_to_dynamodb_item(alert))
 
         return all_events
 
     except Exception as e:
-        print(f"[오류] GitHub 검색 중 문제가 발생했습니다: {e}")
+        print(f"[오류] GitHub 2단계 정밀 검색 중 문제가 발생했습니다 : {e}")
         return []

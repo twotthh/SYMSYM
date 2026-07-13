@@ -33,8 +33,8 @@ def search_google_leaks(target: str):
 
     search_query = (
         f'"{target}" '
-        f'(password | leak | "db dump" | '
-        f'"internal source" | confidential | cv)'
+        f'(ext:sql OR ext:env OR ext:log OR ext:bak OR ext:txt OR ext:csv) '
+        f'(intext:password OR intext:"api_key" OR intext:token OR intext:"db_pass")'
     )
 
     try:
@@ -120,16 +120,3 @@ def search_google_leaks(target: str):
     except Exception as e:
         print(f"[오류] Google 검색 중 문제가 발생했습니다: {e}")
         return []
-
-if __name__ == "__main__":
-
-    test_domains = [
-        "samsung.com",
-        "ahnlab.com",
-        "go.kr",
-        "duksung.ac.kr"
-    ]
-
-    for domain in test_domains:
-        search_google_leaks(domain)
-        time.sleep(2)

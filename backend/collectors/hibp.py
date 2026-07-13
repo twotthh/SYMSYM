@@ -130,15 +130,3 @@ def search_breach(email: str):
     except Exception as e:
         print(f"[오류] HIBP 스캔 중 문제가 발생했습니다: {e}")
         return []
-
-if __name__ == "__main__":
-
-    test_targets = [
-        "samsung.com",
-        "ahnlab.com",
-        "duksung.ac.kr"
-    ]
-
-    for email in test_targets:
-        search_breach(email)
-        time.sleep(2)
