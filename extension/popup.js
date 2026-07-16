@@ -99,7 +99,7 @@ document.getElementById('scanBtn').addEventListener('click', async () => {
     const resultBox = document.getElementById('result-box');
     const dashboardBtn = document.getElementById('dashboardBtn'); // 고정된 검은색 버튼 가져오기
 
-    if (!target) { resultBox.innerHTML = "도메인/이메일을 입력해주세요."; return; }
+    if (!target) { resultBox.innerHTML = "도메인/이메일/전화번호 을 입력해주세요."; return; }
 
     chrome.storage.local.set({ lastSearchedTarget: target });
 
