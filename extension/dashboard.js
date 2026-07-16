@@ -10,7 +10,7 @@ window.onload = () => {
 
 document.getElementById('analyzeBtn').addEventListener('click', async () => {
     const target = document.getElementById('targetInput').value.trim();
-    if (!target) return alert("모니터링할 이메일이나 도메인을 입력해주세요!");
+    if (!target) return alert("모니터링할 도메인/이메일/전화번호 을 입력해주세요!");
 
     const btn = document.getElementById('analyzeBtn');
     btn.classList.add('loading');
