@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 from datetime import datetime
 from dotenv import load_dotenv
@@ -14,31 +15,27 @@ TABLE_NAME = "symsym-asm-assets"
 
 
 def get_host(ip: str):
-
     url = f"https://api.shodan.io/shodan/host/{ip}"
     params = {"key": API_KEY}
 
     try:
-        # 1. Shodan API 호출
-        response = requests.get(
-            url,
-            params=params,
-            timeout=10
-        )
+        response = requests.get(url, params=params, timeout=10)
 
-        # 2. 응답 상태 확인
         if response.status_code != 200:
-            print(f"[오류] Shodan API 응답 실패 (Status: {response.status_code})")
+            # 404 에러(Shodan에 기록 없는 IP)는 패스
+            if response.status_code != 404:
+                print(f"[오류] Shodan API 응답 실패 (IP: {ip}, Status: {response.status_code})")
             return None
 
         data = response.json()
 
-        # 3. Shodan 결과 데이터 파싱
         open_ports = data.get("ports", [])
         domains = data.get("domains", [])
         hostnames = data.get("hostnames", [])
+        
+        # 취약점(CVE) 데이터 추출
+        vulns = data.get("vulns", []) 
 
-        # 4. Shodan 응답을 AsmAsset 모델로 변환
         asset = AsmAsset(
             source="Shodan",
             ip=data.get("ip_str", ip),
@@ -51,28 +48,44 @@ def get_host(ip: str):
             open_ports=open_ports,
             service_count=len(open_ports),
             os=data.get("os"),
+            vulnerabilities=vulns, # 추출한 취약점 리스트 모델에 맵핑
             last_scan=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             is_alerted=False
         )
 
-        # 5. 공통 Mapper를 이용하여 DynamoDB 저장 형식으로 변환
         item = asm_asset_to_dynamodb_item(asset)
-
-        # 6. DynamoDB 저장
         save_to_dynamodb(TABLE_NAME, item)
+        
+        if vulns:
+            print(f"[경고] {ip} 에서 {len(vulns)}개의 취약점(CVE)이 발견되었습니다!")
 
         return asset
 
     except Exception as e:
-        print(f"[오류] Shodan 스캔 중 문제가 발생했습니다: {e}")
+        print(f"[오류] Shodan 스캔 중 문제 발생 ({ip}): {e}")
         return None
 
+
+def scan_multiple_ips(ip_list: list):
+    print(f"\n[Shodan] 전달받은 {len(ip_list)}개의 IP에 대한 정밀 스캔을 시작합니다.")
+    
+    results = []
+    for ip in ip_list:
+        # 중복 IP나 빈 문자열 제거
+        if not ip or ip.strip() == "":
+            continue
+            
+        print(f" -> 스캔 진행 중: {ip}")
+        asset = get_host(ip.strip())
+        
+        if asset:
+            results.append(asset)
+            
+        time.sleep(1.5) 
+        
+    print(f"[Shodan] 스캔 완료! 총 {len(results)}개 IP의 인프라 정보가 DB에 적재되었습니다.")
+    return results
+
 if __name__ == "__main__":
-    print("===== Shodan 인프라 스캔 및 AWS 저장 테스트 =====\n")
-
-    asset = get_host("8.8.8.8")
-
-    if asset:
-        print(f"[Shodan] {asset.ip} 자산 정보를 AWS에 저장 완료")
-    else:
-        print("Shodan 자산 정보를 가져오지 못했습니다.")
+    # 단일 IP 테스트
+    get_host("8.8.8.8")

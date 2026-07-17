@@ -2,17 +2,21 @@ import os
 import boto3
 import hashlib
 import asyncio
+import re
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from boto3.dynamodb.conditions import Key
 from dotenv import load_dotenv
 from pydantic import BaseModel
+from boto3.dynamodb.conditions import Key, Attr
 
 from backend.collectors.hibp import search_breach
 from backend.collectors.google import search_google_leaks
 from backend.collectors.github import search_github_leaks
 from backend.collectors.telegram import scrape_telegram
+from backend.collectors.hackertarget import scan_subdomains
+from backend.collectors.shodan import scan_multiple_ips
 
 load_dotenv()
 
@@ -36,43 +40,86 @@ dynamodb = boto3.resource(
     region_name=os.getenv('AWS_DEFAULT_REGION')
 )
 
+EMAIL_REGEX = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+DOMAIN_REGEX = r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$'
+PHONE_REGEX = r'^01[016789]-?([0-9]{3,4})-?([0-9]{4})$'
+
 # 1. 서버 상태 확인 API
 @app.get("/")
 def read_root():
     return {"status": "ok", "message": "SYMSYM API 서버 정상 작동"}
 
 # 2. 실시간 위협 데이터 조회 API 
-@app.get("/api/alerts/{email}")
-async def get_user_alerts(email: str):  
-    print(f"\n[모니터링 시작] 클라이언트에서 '{email}' 조회를 요청했습니다.")
+@app.get("/api/alerts/{target}")
+async def get_user_alerts(target: str):  
+    print(f"\n[모니터링 시작] 클라이언트에서 '{target}' 조회를 요청했습니다.")
     
-    print("1. HIBP, Google, GitHub 스캔 중...")
-    search_breach(email)
-    search_google_leaks(email)
-    search_github_leaks(email)
-    
-    print("2. 텔레그램 채널 스캔 중...")
-    await scrape_telegram(email)  # 텔레그램은 비동기이므로 await 대기
+    # 입력값 분류 및 라우팅
+    if re.match(EMAIL_REGEX, target):
+        print("[분류] 입력값이 '이메일'입니다. 기존 OSINT 스캔을 시작합니다.")
+        search_breach(target)
+        search_google_leaks(target)
+        search_github_leaks(target)
+        await scrape_telegram(target)
 
-    print(f"[{email}] 봇 수집 및 적재 완료 -> DB 결과 가져옴\n")
+    elif re.match(PHONE_REGEX, target):
+        print("[분류] 입력값이 '전화번호'입니다. (전화번호 전용 모듈 연동 예정)")
+        # TODO: 구글 API 등을 활용한 전화번호 스캔 연동
+
+    elif re.match(DOMAIN_REGEX, target):
+        print("[분류] 입력값이 '도메인'입니다. 연쇄 ASM 파이프라인을 가동합니다.")
+        
+        # Step 1 : HackerTarget을 통해 서브도메인 및 IP 추출
+        extracted_ips = scan_subdomains(target)
+        
+        # Step 2 : 추출된 IP 리스트를 Shodan으로 넘겨서 취약점 연속 스캔
+        if extracted_ips:
+            scan_multiple_ips(extracted_ips)
+
+    else:
+        print("[분류] '일반 키워드'입니다. 딥웹/다크웹 키워드 모니터링만 수행합니다.")
+        search_google_leaks(target)
+        search_github_leaks(target)
+        await scrape_telegram(target)
+
+    print(f"\n[{target}] 봇 수집 및 적재 완료 -> DB 결과 가져옴\n")
 
     try:
+        alerts_list = []
+        # 1. 기존 OSINT 유출 데이터 조회
         table = dynamodb.Table('symsym-threat-events-v2')
         response = table.query(
-            KeyConditionExpression=Key('email').eq(email)
+            KeyConditionExpression=Key('email').eq(target)
         )
-        items = response.get('Items', [])
         
-        alerts_list = []
-        for item in items:
+        for item in response.get('Items', []):
             alerts_list.append({
                 "source": item.get("source", "Unknown"),
                 "threat_level": item.get("threat_level", "HIGH"),
                 "description": item.get("description", "유출 상세 정보 없음")
             })
+
+        # 2. ASM 인프라 취약점 데이터 조회 
+        if re.match(DOMAIN_REGEX, target):
+            asm_table = dynamodb.Table('symsym-asm-assets')
             
+            # 도메인 이름이 포함된 자산들을 스캔해서 가져옴
+            asm_response = asm_table.scan(
+                FilterExpression=Attr('domain').contains(target)
+            )
+            
+            for item in asm_response.get('Items', []):
+                vulns = item.get('vulnerabilities', [])
+                if vulns:
+                    # 취약점(CVE)이 발견된 자산만 프론트엔드 알림 리스트에 추가
+                    alerts_list.append({
+                        "source": "Shodan ASM",
+                        "threat_level": "CRITICAL", 
+                        "description": f"[{item.get('ip')}] 서버 인프라에서 {len(vulns)}개의 치명적 취약점(CVE) 발견!"
+                    })
+
         return {
-            "email": email,
+            "email": target, 
             "message": "모니터링 완료",
             "alerts": alerts_list
         }
