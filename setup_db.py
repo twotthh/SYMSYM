@@ -13,7 +13,7 @@ dynamodb = boto3.resource(
 )
 
 def create_threat_events_table():
-    table_name = 'symsym-threat-events'
+    table_name = 'symsym-threat-events-v2'
     
     try:
         print(f"[{table_name}] 테이블 생성을 AWS에 요청")
@@ -24,11 +24,11 @@ def create_threat_events_table():
                 # 파티션 키 (Partition Key) : 데이터를 찾는 가장 큰 기준점
                 {'AttributeName': 'email', 'KeyType': 'HASH'},  
                 # 정렬 키 (Sort Key) : 같은 기준점 안에서 정렬하는 기준
-                {'AttributeName': 'detected_at', 'KeyType': 'RANGE'} 
+                {'AttributeName': 'event_id', 'KeyType': 'RANGE'} 
             ],
             AttributeDefinitions=[
                 {'AttributeName': 'email', 'AttributeType': 'S'},     
-                {'AttributeName': 'detected_at', 'AttributeType': 'S'} 
+                {'AttributeName': 'event_id', 'AttributeType': 'S'} 
             ],
             # 온디맨드 방식
             BillingMode='PAY_PER_REQUEST' 

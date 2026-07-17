@@ -17,6 +17,7 @@ class ThreatEvent:
 
     # HIBP 정보
     breach_name: Optional[str] = None
+    breach_date: Optional[str] = None
 
     # GitHub 정보
     repository: Optional[str] = None
@@ -36,6 +37,9 @@ class ThreatEvent:
 
     # 탐지 시간
     detected_at: Optional[datetime] = None
+
+    # 데이터 유형
+    data_type: str = "live"
 
     # 확인 여부
     is_confirmed: bool = False

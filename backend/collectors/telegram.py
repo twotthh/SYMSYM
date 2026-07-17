@@ -1,5 +1,4 @@
 import os
-import uuid
 from datetime import datetime
 from dotenv import load_dotenv
 from telethon.sync import TelegramClient
@@ -13,6 +12,7 @@ from backend.utils.mapper import (
     threat_event_to_dynamodb_item,
     alert_to_dynamodb_item
 )
+from backend.utils.event_id import generate_event_id
 
 load_dotenv()
 
@@ -30,7 +30,7 @@ API_HASH = (
     .strip('"')
 )
 
-THREAT_EVENT_TABLE = "symsym-threat-events"
+THREAT_EVENT_TABLE = "symsym-threat-events-v2"
 ALERT_TABLE = "symsym-alerts"
 
 TARGET_CHANNELS = [
@@ -89,16 +89,19 @@ async def scrape_telegram(target: str):
                     event = ThreatEvent(
                         source="Telegram",
 
-                        # ThreatEvent 생성 시 고유 ID 생성
-                        event_id=str(uuid.uuid4()),
+                        # 동일한 Telegram 메시지는 항상 동일한 event_id 생성
+                        event_id=generate_event_id(
+                            "Telegram",
+                            target,
+                            f"https://t.me/{channel}/{msg.id}"
+                        ),
 
                         email=target,
                         leaked_keyword="N/A",
                         url=f"https://t.me/{channel}/{msg.id}",
                         description=msg.text[:200] + "...",
-                        detected_at=datetime.now().strftime(
-                            "%Y-%m-%d %H:%M:%S"
-                        ),
+                        detected_at=datetime.now(),
+                        data_type="live",
                         is_confirmed=False
                     )
 

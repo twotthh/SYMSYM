@@ -57,7 +57,7 @@ async def get_user_alerts(email: str):
     print(f"[{email}] 봇 수집 및 적재 완료 -> DB 결과 가져옴\n")
 
     try:
-        table = dynamodb.Table('symsym-threat-events')
+        table = dynamodb.Table('symsym-threat-events-v2')
         response = table.query(
             KeyConditionExpression=Key('email').eq(email)
         )

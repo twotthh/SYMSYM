@@ -1,5 +1,4 @@
 import os
-import uuid
 import requests
 import time
 from datetime import datetime
@@ -14,12 +13,13 @@ from backend.utils.mapper import (
     threat_event_to_dynamodb_item,
     alert_to_dynamodb_item
 )
+from backend.utils.event_id import generate_event_id
 
 load_dotenv()
 
 TOKEN = os.getenv("GITHUB_API_TOKEN")
 
-THREAT_EVENT_TABLE = "symsym-threat-events"
+THREAT_EVENT_TABLE = "symsym-threat-events-v2"
 ALERT_TABLE = "symsym-alerts"
 
 def search_github_leaks(target: str):
@@ -56,13 +56,18 @@ def search_github_leaks(target: str):
 
                 event = ThreatEvent(
                     source="GitHub",
-                    event_id=str(uuid.uuid4()),
+                    event_id=generate_event_id(
+                        "GitHub",
+                        target,
+                        repo_full_name,
+                        item.get("html_url")
+                    ),
                     email=target,
                     leaked_keyword="Repository Match",
                     repository=repo_full_name,
                     url=item.get("html_url"),
                     description=f"[저장소 노출] {item.get('description', '')[:150]}",
-                    detected_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    detected_at=datetime.now(),
                     is_confirmed=False
                 )
                 
@@ -98,13 +103,19 @@ def search_github_leaks(target: str):
 
                 event = ThreatEvent(
                     source="GitHub",
-                    event_id=str(uuid.uuid4()),
+                    event_id=generate_event_id(
+                        "GitHub",
+                        target,
+                        repo_full_name,
+                        item.get("html_url")
+                    ),
                     email=target,
                     leaked_keyword="Code Content Match",
                     repository=repo_full_name,
                     url=item.get("html_url"),  # 실제 유출된 소스코드 파일의 직접 링크
                     description=f"[소스코드 내부 유출] 파일명 : {item.get('name')} (해당 소스코드 내부에 키워드 존재 파악)",
-                    detected_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    detected_at=datetime.now(),
+                    data_type="live",
                     is_confirmed=False
                 )
 

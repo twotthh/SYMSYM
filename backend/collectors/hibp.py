@@ -1,6 +1,5 @@
 import os
 import time
-import uuid
 import requests
 from datetime import datetime
 from dotenv import load_dotenv
@@ -15,11 +14,13 @@ from backend.utils.mapper import (
     alert_to_dynamodb_item
 )
 
+from backend.utils.event_id import generate_event_id
+
 load_dotenv()
 
 API_KEY = os.getenv("HIBP_API_KEY")
 
-THREAT_EVENT_TABLE = "symsym-threat-events"
+THREAT_EVENT_TABLE = "symsym-threat-events-v2"
 ALERT_TABLE = "symsym-alerts"
 
 def search_breach(email: str):
@@ -77,20 +78,29 @@ def search_breach(email: str):
             event = ThreatEvent(
                 source="HIBP",
 
-                # ThreatEvent 생성 시 고유 ID 생성
-                event_id=str(uuid.uuid4()),
+                event_id=generate_event_id(
+                    "HIBP",
+                    email,
+                    breach.get("Name"),
+                    breach_date
+                ),
 
                 email=email,
+
                 breach_name=breach.get("Name"),
+
+                # 유츌시기 추가
+                breach_date=breach_date,
+
                 description=breach.get("Description"),
-                detected_at=(
-                    breach_date
-                    if breach_date
-                    else datetime.now().strftime("%Y-%m-%d")
-                ),
+
+                # 탐지 시간은 항상 현재 시간
+                detected_at=datetime.now(),
+
+                data_type="live",
+
                 is_confirmed=False
             )
-
             # 4. RiskService를 이용하여 위험도 계산
             event = calculate_risk([event])[0]
 

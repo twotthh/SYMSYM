@@ -15,12 +15,17 @@ def threat_event_to_dynamodb_item(event: ThreatEvent) -> dict:
 
         # DynamoDB 기본 키
         "email": event.email,
-        "detected_at": str(event.detected_at) if event.detected_at else None,
+        "detected_at": (
+            event.detected_at.strftime("%Y-%m-%d %H:%M:%S")
+            if event.detected_at
+            else None
+        ),
 
         "source": event.source,
         "threat_level": event.threat_level,
 
         "breach_name": event.breach_name,
+        "breach_date": event.breach_date,
 
         "repository": event.repository,
         "file_path": event.file_path,
@@ -31,6 +36,7 @@ def threat_event_to_dynamodb_item(event: ThreatEvent) -> dict:
         "message_id": event.message_id,
 
         "description": event.description,
+        "data_type": event.data_type,
         "is_confirmed": event.is_confirmed
     }
 

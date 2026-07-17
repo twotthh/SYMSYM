@@ -1,6 +1,5 @@
 import os
 import time
-import uuid
 import requests
 from datetime import datetime
 from dotenv import load_dotenv
@@ -14,13 +13,14 @@ from backend.utils.mapper import (
     threat_event_to_dynamodb_item,
     alert_to_dynamodb_item
 )
+from backend.utils.event_id import generate_event_id
 
 load_dotenv()
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GOOGLE_SEARCH_CX = os.getenv("GOOGLE_SEARCH_CX")
 
-THREAT_EVENT_TABLE = "symsym-threat-events"
+THREAT_EVENT_TABLE = "symsym-threat-events-v2"
 ALERT_TABLE = "symsym-alerts"
 
 def search_google_leaks(target: str):
@@ -66,8 +66,12 @@ def search_google_leaks(target: str):
             event = ThreatEvent(
                 source="Google Search",
 
-                # ThreatEvent 생성 시 고유 ID 생성
-                event_id=str(uuid.uuid4()),
+                # 동일한 검색 결과는 항상 동일한 event_id 생성
+                event_id=generate_event_id(
+                    "Google Search",
+                    target,
+                    item.get("link")
+                ),
 
                 email=target,
                 url=item.get("link", ""),
@@ -75,9 +79,8 @@ def search_google_leaks(target: str):
                     f"[{item.get('title', '')}] "
                     f"{item.get('snippet', '')}"
                 ),
-                detected_at=datetime.now().strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                ),
+                detected_at=datetime.now(),
+                data_type="live",
                 is_confirmed=False
             )
 
