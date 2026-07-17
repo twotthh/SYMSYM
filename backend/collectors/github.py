@@ -38,53 +38,100 @@ def search_github_leaks(target: str):
     all_events = []
     processed_repos = set()  
 
-    print(f"[GitHub] '{target}' 기반 2단계 정밀 모니터링 시작")
+    print(f"[GitHub] '{target}' 기반 3단계 정밀 모니터링 시작")
 
+    # 1. 리포지토리 이름 검색
     try:
-        # 1. 리포지토리 검색 (이름이나 설명에 키워드가 있는 경우)
-        repo_response = requests.get(
+        # in:name 쿼리를 사용하여 저장소 이름만 명확하게 타겟팅
+        name_response = requests.get(
             repo_url,
             headers=headers,
-            params={"q": f'"{target}"', "per_page": 3},
+            params={"q": f'"{target}" in:name', "per_page": 3},
             timeout=10
         )
 
-        if repo_response.status_code == 200:
-            for item in repo_response.json().get("items", []):
+        if name_response.status_code == 200:
+            for item in name_response.json().get("items", []):
                 repo_full_name = item.get("full_name")
-                processed_repos.add(repo_full_name)  # 1단계에서 잡힌 저장소 등록
+                processed_repos.add(repo_full_name) 
 
                 event = ThreatEvent(
                     source="GitHub",
                     event_id=generate_event_id(
-                        "GitHub",
-                        target,
-                        repo_full_name,
-                        item.get("html_url")
+                        "GitHub", target, repo_full_name, item.get("html_url")
                     ),
                     email=target,
-                    leaked_keyword="Repository Match",
+                    leaked_keyword="Repository Name Match",
                     repository=repo_full_name,
                     url=item.get("html_url"),
-                    description=f"[저장소 노출] {item.get('description', '')[:150]}",
+                    description=f"[저장소 이름 노출] {item.get('description', '')[:150]}",
                     detected_at=datetime.now(),
+                    data_type="live",
                     is_confirmed=False
                 )
                 
-                # 위험도 채점, 매핑 및 DB 저장
                 event = calculate_risk([event])[0]
                 all_events.append(event)
                 save_to_dynamodb(THREAT_EVENT_TABLE, threat_event_to_dynamodb_item(event))
                 
-                # 알림 생성 및 저장
                 alerts = create_alerts(User(email=target), [event])
                 for alert in alerts:
                     save_to_dynamodb(ALERT_TABLE, alert_to_dynamodb_item(alert))
+    except Exception as e:
 
-        time.sleep(1)
+        print(f"[오류] GitHub 1단계(이름 검색) 실패 : {e}")
 
-        # 2. 소스코드 검색 (리포지토리엔 없지만 코드 텍스트 내부에 숨어있는 경우)
-        # 전 세계 퍼블릭 코드 전체를 대상으로 타겟 키워드가 박힌 소스파일 검색
+    time.sleep(1) 
+
+    # 2. 리포지토리 설명글(Description) 검색
+    try:
+        # in:description 쿼리를 사용하여 설명글 내부 텍스트 타겟팅
+        desc_response = requests.get(
+            repo_url,
+            headers=headers,
+            params={"q": f'"{target}" in:description', "per_page": 3},
+            timeout=10
+        )
+
+        if desc_response.status_code == 200:
+            for item in desc_response.json().get("items", []):
+                repo_full_name = item.get("full_name")
+                
+                # 1단계에서 이미 처리한 저장소면 중복 적재 패스
+                if repo_full_name in processed_repos:
+                    continue
+                
+                processed_repos.add(repo_full_name) 
+
+                event = ThreatEvent(
+                    source="GitHub",
+                    event_id=generate_event_id(
+                        "GitHub", target, repo_full_name, item.get("html_url")
+                    ),
+                    email=target,
+                    leaked_keyword="Repository Description Match",
+                    repository=repo_full_name,
+                    url=item.get("html_url"),
+                    description=f"[저장소 설명글 노출] {item.get('description', '')[:150]}",
+                    detected_at=datetime.now(),
+                    data_type="live",
+                    is_confirmed=False
+                )
+                
+                event = calculate_risk([event])[0]
+                all_events.append(event)
+                save_to_dynamodb(THREAT_EVENT_TABLE, threat_event_to_dynamodb_item(event))
+                
+                alerts = create_alerts(User(email=target), [event])
+                for alert in alerts:
+                    save_to_dynamodb(ALERT_TABLE, alert_to_dynamodb_item(alert))
+    except Exception as e:
+        print(f"[오류] GitHub 2단계(설명글 검색) 실패 : {e}")
+
+    time.sleep(2)
+
+    # 3. 내부 소스코드(Code Content) 텍스트 검색
+    try:
         code_response = requests.get(
             code_url,
             headers=headers,
@@ -97,40 +144,33 @@ def search_github_leaks(target: str):
                 repo_info = item.get("repository", {})
                 repo_full_name = repo_info.get("full_name")
 
-                # 이미 1단계(리포지토리 이름 검색)에서 처리된 저장소라면 중복 저장 패스
+                # 1, 2단계에서 잡힌 저장소라면 패스
                 if repo_full_name in processed_repos:
                     continue
 
                 event = ThreatEvent(
                     source="GitHub",
                     event_id=generate_event_id(
-                        "GitHub",
-                        target,
-                        repo_full_name,
-                        item.get("html_url")
+                        "GitHub", target, repo_full_name, item.get("html_url")
                     ),
                     email=target,
                     leaked_keyword="Code Content Match",
                     repository=repo_full_name,
-                    url=item.get("html_url"),  # 실제 유출된 소스코드 파일의 직접 링크
-                    description=f"[소스코드 내부 유출] 파일명 : {item.get('name')} (해당 소스코드 내부에 키워드 존재 파악)",
+                    url=item.get("html_url"),  
+                    description=f"[소스코드 내부 유출] 파일명 : {item.get('name')} (내부에 키워드 존재 파악)",
                     detected_at=datetime.now(),
                     data_type="live",
                     is_confirmed=False
                 )
 
-                # 위험도 채점, 매핑 및 DB 저장
                 event = calculate_risk([event])[0]
                 all_events.append(event)
                 save_to_dynamodb(THREAT_EVENT_TABLE, threat_event_to_dynamodb_item(event))
 
-                # 알림 생성 및 저장
                 alerts = create_alerts(User(email=target), [event])
                 for alert in alerts:
                     save_to_dynamodb(ALERT_TABLE, alert_to_dynamodb_item(alert))
-
-        return all_events
-
     except Exception as e:
-        print(f"[오류] GitHub 2단계 정밀 검색 중 문제가 발생했습니다 : {e}")
-        return []
+        print(f"[오류] GitHub 3단계(소스코드 검색) 실패 : {e}")
+
+    return all_events
