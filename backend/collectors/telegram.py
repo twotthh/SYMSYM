@@ -34,22 +34,11 @@ THREAT_EVENT_TABLE = "symsym-threat-events-v2"
 ALERT_TABLE = "symsym-alerts"
 
 TARGET_CHANNELS = [
-    # 기존 모니터링 채널 (공개 채널)
     "test99026",
     "FalconFeedsio",
-    "vxunderground",
-    "thehackersnews",
-
-    # NordStellar 언급 다크웹/유출 채널
-    "NoName05716_eng",   # NoName057(16) 영문 공개 채널
-    "RipperSec_Official", # RipperSec 등 (핸들명 확인 필요)
-    
-    # Cloud 계열은 프라이빗이거나 수시로 핸들이 바뀔 수 있음
-    "MoonCloud_Logs",    # Moon Cloud
-    "DaisyCloud_Logs",   # Daisy Cloud
-    "ObserverCloud",     # Observer Cloud 
-    "OmegaCloud",        # Omega Cloud
-    "BidenCash_Official" # BidenCash 
+    "CyberSecNews",
+    "daily_dark_web",
+    "BidenCash_Official"
 ]
 
 async def scrape_telegram(target: str):

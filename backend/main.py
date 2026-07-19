@@ -3,13 +3,13 @@ import boto3
 import hashlib
 import asyncio
 import re
+import uuid  
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Key, Attr
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from boto3.dynamodb.conditions import Key, Attr
 
 from backend.collectors.hibp import search_breach
 from backend.collectors.google import search_google_leaks
@@ -55,32 +55,51 @@ def read_root():
 async def get_user_alerts(target: str):  
     print(f"\n[모니터링 시작] 클라이언트에서 '{target}' 조회를 요청했습니다.")
     
-    # 전화번호 모의 결과를 임시로 담을 리스트 추가!
-    phone_alerts = [] 
-    
     # 입력값 분류 및 라우팅
     if re.match(EMAIL_REGEX, target):
-        print("[분류] 입력값이 '이메일'입니다. 기존 OSINT 스캔을 시작합니다.")
+        print("[분류] 입력값이 '이메일'입니다. OSINT 스캔을 시작합니다.")
         search_breach(target)
         search_google_leaks(target)
         search_github_leaks(target)
         await scrape_telegram(target)
 
     elif re.match(PHONE_REGEX, target):
-        # 👇 TODO를 지우고 전화번호 모듈 실행 코드 추가
-        print("[분류] 입력값이 '전화번호'입니다. 전화번호 전용 스캔을 시작합니다.")
-        phone_alerts = await scan_phone_number(target)
+        print("[분류] 입력값이 '전화번호'입니다. DB 캐시 확인 및 스캔을 시작합니다.")
+        table = dynamodb.Table('symsym-threat-events-v2')
+        
+        # 1. DB에 결과가 이미 있는지 먼저 확인 
+        cache_response = table.query(KeyConditionExpression=Key('email').eq(target))
+        
+        if cache_response.get('Items'):
+            print(f"[{target}] 이미 스캔된 이력이 DB에 있습니다. API 호출을 생략합니다.")
+        else:
+            print(f"[{target}] 신규 번호입니다. 실시간 모듈 스캔을 가동합니다 (약 3~5초 소요).")
+            phone_alerts = await scan_phone_number(target)
+            
+            # 2. 실시간 스캔 완료 후 결과를 DB에 영구 적재
+            for alert in phone_alerts:
+                try:
+                    table.put_item(
+                        Item={
+                            'email': target,  
+                            'id': uuid.uuid4().hex,  
+                            'source': alert.get("source", "Unknown"),
+                            'threat_level': alert.get("threat_level", "LOW"),
+                            'description': alert.get("description", "유출 상세 정보 없음")
+                        }
+                    )
+                except Exception as e:
+                    print(f"[{target}] DB 저장 실패: {e}")
+            print(f"[{target}] DB 적재 완료")
 
     elif re.match(DOMAIN_REGEX, target):
-        print("[분류] 입력값이 '도메인'입니다. 연쇄 ASM 파이프라인을 가동합니다.")
-        # Step 1 : HackerTarget을 통해 서브도메인 및 IP 추출
+        print("[분류] 입력값이 '도메인'입니다. ASM 파이프라인을 시작합니다.")
         extracted_ips = scan_subdomains(target)
-        # Step 2 : 추출된 IP 리스트를 Shodan으로 넘겨서 취약점 연속 스캔
         if extracted_ips:
             scan_multiple_ips(extracted_ips)
 
     else:
-        print("[분류] '일반 키워드'입니다. 딥웹/다크웹 키워드 모니터링만 수행합니다.")
+        print("[분류] '일반 키워드'입니다. 딥웹/다크웹 키워드 모니터링을 수행합니다.")
         search_google_leaks(target)
         search_github_leaks(target)
         await scrape_telegram(target)
@@ -89,7 +108,7 @@ async def get_user_alerts(target: str):
 
     try:
         alerts_list = []
-        # 1. 기존 OSINT 유출 데이터 조회
+        # 3. 전화번호든 이메일이든 DB에서 한 번에 가져옴
         table = dynamodb.Table('symsym-threat-events-v2')
         response = table.query(
             KeyConditionExpression=Key('email').eq(target)
@@ -102,7 +121,7 @@ async def get_user_alerts(target: str):
                 "description": item.get("description", "유출 상세 정보 없음")
             })
 
-        # 2. ASM 인프라 취약점 데이터 조회 
+        # ASM 인프라 취약점 데이터 조회 
         if re.match(DOMAIN_REGEX, target):
             asm_table = dynamodb.Table('symsym-asm-assets')
             asm_response = asm_table.scan(
@@ -116,10 +135,6 @@ async def get_user_alerts(target: str):
                         "threat_level": "CRITICAL", 
                         "description": f"[{item.get('ip')}] 서버 인프라에서 {len(vulns)}개의 치명적 취약점(CVE) 발견!"
                     })
-        
-        # 👇 3. 전화번호 검색이었다면, 임시 리스트에 담아둔 결과를 최종 응답에 합치기
-        if phone_alerts:
-            alerts_list.extend(phone_alerts)
 
         return {
             "email": target, 
@@ -145,12 +160,10 @@ def hash_password(password: str) -> str:
 def register_user(user: UserAuth):
     table = dynamodb.Table('symsym-users')
     
-    # 이미 가입된 이메일인지 확인
     response = table.get_item(Key={'email': user.email})
     if 'Item' in response:
         raise HTTPException(status_code=400, detail="이미 가입된 이메일입니다.")
     
-    # 새 회원 DB에 저장 (비밀번호는 암호화)
     try:
         table.put_item(
             Item={
@@ -167,16 +180,13 @@ def register_user(user: UserAuth):
 def login_user(user: UserAuth):
     table = dynamodb.Table('symsym-users')
     
-    # DB에서 이메일 검색
     response = table.get_item(Key={'email': user.email})
     db_user = response.get('Item')
     
     if not db_user:
         raise HTTPException(status_code=400, detail="가입되지 않은 이메일입니다.")
     
-    # 비밀번호 검증
     if db_user['password_hash'] != hash_password(user.password):
         raise HTTPException(status_code=400, detail="비밀번호가 일치하지 않습니다.")
     
-    # 로그인 성공 시 사용자 이메일 반환
     return {"message": "로그인 성공", "email": user.email}
