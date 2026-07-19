@@ -28,7 +28,7 @@ document.getElementById('registerBtn').addEventListener('click', async () => {
     if (!email || !password) return msgBox.innerText = "이메일과 비밀번호를 모두 입력해주세요.";
 
     try {
-        const response = await fetch('http://127.0.0.1:8000/api/register', {
+        const response = await fetch('http://43.200.5.232:8000/api/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
@@ -56,7 +56,7 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
     if (!email || !password) return msgBox.innerText = "이메일과 비밀번호를 모두 입력해주세요.";
 
     try {
-        const response = await fetch('http://127.0.0.1:8000/api/login', {
+        const response = await fetch('http://43.200.5.232:8000/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
@@ -101,7 +101,7 @@ document.getElementById('scanBtn').addEventListener('click', async () => {
     if (dashboardBtn) dashboardBtn.innerHTML = `대시보드 보기 &rarr;`;
 
     try {
-        const response = await fetch(`http://127.0.0.1:8000/api/alerts/${target}`);
+        const response = await fetch(`http://43.200.5.232:8000/api/alerts/${target}`);
         const data = await response.json();
 
         if (data.alerts && data.alerts.length > 0) {

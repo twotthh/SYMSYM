@@ -19,7 +19,7 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
     document.getElementById('liveStatus').innerHTML = `<span class="dot"></span>실시간 모니터링 진행 중...`;
 
     try {
-        const response = await fetch(`http://127.0.0.1:8000/api/alerts/${target}`);
+        const response = await fetch(`http://43.200.5.232:8000/api/alerts/${target}`);
         const data = await response.json();
 
         const tbody = document.getElementById('resultBody');

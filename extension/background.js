@@ -1,6 +1,6 @@
 // 1. 익스텐션이 켜지면 '1분 주기' 알람 등록 
 chrome.runtime.onInstalled.addListener(() => {
-    chrome.alarms.create("symsymMonitor", { periodInMinutes: 1 });
+    chrome.alarms.create("symsymMonitor", { periodInMinutes: 1440 });
     console.log("SYMSYM 백그라운드 상시 감시망 가동 완료 (1분 주기)");
 });
 
@@ -17,7 +17,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
             try {
                 // 백엔드 API
-                const response = await fetch(`http://127.0.0.1:8000/api/alerts/${target}`);
+                const response = await fetch(`http://43.200.5.232:8000/api/alerts/${target}`);
                 const result = await response.json();
 
                 if (result.alerts && result.alerts.length > 0) {
