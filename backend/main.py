@@ -16,8 +16,10 @@ from backend.collectors.google import search_google_leaks
 from backend.collectors.github import search_github_leaks
 from backend.collectors.telegram import scrape_telegram
 from backend.collectors.hackertarget import scan_subdomains
-from backend.collectors.shodan import scan_multiple_ips
 from backend.collectors.phone import scan_phone_number
+
+from backend.collectors.shodan import scan_multiple_ips as shodan_scan
+from backend.collectors.censys import scan_multiple_ips as censys_scan
 
 load_dotenv()
 
@@ -93,10 +95,12 @@ async def get_user_alerts(target: str):
             print(f"[{target}] DB 적재 완료")
 
     elif re.match(DOMAIN_REGEX, target):
-        print("[분류] 입력값이 '도메인'입니다. ASM 파이프라인을 시작합니다.")
+        # Shodan과 Censys를 모두 호출
+        print("[분류] 입력값이 '도메인'입니다. ASM 파이프라인(Shodan + Censys)을 가동합니다.")
         extracted_ips = scan_subdomains(target)
         if extracted_ips:
-            scan_multiple_ips(extracted_ips)
+            shodan_scan(extracted_ips)  # Shodan 스캔 진행
+            censys_scan(extracted_ips)  # Censys 스캔 진행 
 
     else:
         print("[분류] '일반 키워드'입니다. 딥웹/다크웹 키워드 모니터링을 수행합니다.")
@@ -131,7 +135,7 @@ async def get_user_alerts(target: str):
                 vulns = item.get('vulnerabilities', [])
                 if vulns:
                     alerts_list.append({
-                        "source": "Shodan ASM",
+                        "source": f"{item.get('source', 'ASM')} Infrastructure", 
                         "threat_level": "CRITICAL", 
                         "description": f"[{item.get('ip')}] 서버 인프라에서 {len(vulns)}개의 치명적 취약점(CVE) 발견!"
                     })
