@@ -17,6 +17,7 @@ from backend.collectors.github import search_github_leaks
 from backend.collectors.telegram import scrape_telegram
 from backend.collectors.hackertarget import scan_subdomains
 from backend.collectors.shodan import scan_multiple_ips
+from backend.collectors.phone import scan_phone_number
 
 load_dotenv()
 
@@ -54,6 +55,9 @@ def read_root():
 async def get_user_alerts(target: str):  
     print(f"\n[모니터링 시작] 클라이언트에서 '{target}' 조회를 요청했습니다.")
     
+    # 전화번호 모의 결과를 임시로 담을 리스트 추가!
+    phone_alerts = [] 
+    
     # 입력값 분류 및 라우팅
     if re.match(EMAIL_REGEX, target):
         print("[분류] 입력값이 '이메일'입니다. 기존 OSINT 스캔을 시작합니다.")
@@ -63,15 +67,14 @@ async def get_user_alerts(target: str):
         await scrape_telegram(target)
 
     elif re.match(PHONE_REGEX, target):
-        print("[분류] 입력값이 '전화번호'입니다. (전화번호 전용 모듈 연동 예정)")
-        # TODO: 구글 API 등을 활용한 전화번호 스캔 연동
+        # 👇 TODO를 지우고 전화번호 모듈 실행 코드 추가
+        print("[분류] 입력값이 '전화번호'입니다. 전화번호 전용 스캔을 시작합니다.")
+        phone_alerts = await scan_phone_number(target)
 
     elif re.match(DOMAIN_REGEX, target):
         print("[분류] 입력값이 '도메인'입니다. 연쇄 ASM 파이프라인을 가동합니다.")
-        
         # Step 1 : HackerTarget을 통해 서브도메인 및 IP 추출
         extracted_ips = scan_subdomains(target)
-        
         # Step 2 : 추출된 IP 리스트를 Shodan으로 넘겨서 취약점 연속 스캔
         if extracted_ips:
             scan_multiple_ips(extracted_ips)
@@ -102,21 +105,21 @@ async def get_user_alerts(target: str):
         # 2. ASM 인프라 취약점 데이터 조회 
         if re.match(DOMAIN_REGEX, target):
             asm_table = dynamodb.Table('symsym-asm-assets')
-            
-            # 도메인 이름이 포함된 자산들을 스캔해서 가져옴
             asm_response = asm_table.scan(
                 FilterExpression=Attr('domain').contains(target)
             )
-            
             for item in asm_response.get('Items', []):
                 vulns = item.get('vulnerabilities', [])
                 if vulns:
-                    # 취약점(CVE)이 발견된 자산만 프론트엔드 알림 리스트에 추가
                     alerts_list.append({
                         "source": "Shodan ASM",
                         "threat_level": "CRITICAL", 
                         "description": f"[{item.get('ip')}] 서버 인프라에서 {len(vulns)}개의 치명적 취약점(CVE) 발견!"
                     })
+        
+        # 👇 3. 전화번호 검색이었다면, 임시 리스트에 담아둔 결과를 최종 응답에 합치기
+        if phone_alerts:
+            alerts_list.extend(phone_alerts)
 
         return {
             "email": target, 
