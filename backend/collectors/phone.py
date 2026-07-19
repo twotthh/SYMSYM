@@ -31,7 +31,7 @@ async def check_thecall_spam(phone_number: str):
             if "게시물이 없습니다" not in response.text:
                 return {
                     "threat_level": "HIGH", 
-                    "desc": "국내 최대 스팸 데이터베이스(더콜)에서 악성/스팸 번호로 신고된 이력이 발견되었습니다."
+                    "description": "국내 최대 스팸 데이터베이스(더콜)에서 악성/스팸 번호로 신고된 이력이 발견되었습니다."
                 }
     except Exception as e:
         print(f"[Phone Scanner] 더콜 크롤링 에러: {e}")
@@ -51,9 +51,9 @@ async def check_voip_numverify(formatted_number: str):
                 carrier = data.get("carrier", "알 수 없음")
                 
                 if line_type == "mobile":
-                    return {"threat_level": "LOW", "desc": f"정상 모바일 번호입니다. (통신사: {carrier})"}
+                    return {"threat_level": "LOW", "description": f"정상 모바일 번호입니다. (통신사: {carrier})"}
                 elif line_type in ["voip", "landline", "special"]:
-                    return {"threat_level": "HIGH", "desc": f"주의! 가상번호(VoIP/유선)입니다. 대포폰일 가능성이 높습니다. (통신사: {carrier})"}
+                    return {"threat_level": "HIGH", "description": f"주의! 가상번호(VoIP/유선)입니다. 대포폰일 가능성이 높습니다. (통신사: {carrier})"}
     except Exception as e:
         print(f"[Phone Scanner] NumVerify API 에러: {e}")
     return None
@@ -95,9 +95,9 @@ async def check_truecaller_osint(international_number: str):
 
                 if name:
                     t_level = "HIGH" if spam_score > 0 else "LOW"
-                    desc = f"글로벌 연락처 DB(TrueCaller)에서 '{name}'(으)로 저장된 이력이 확인되었습니다."
-                    if spam_score > 0: desc += " (스팸 신고 이력 포함)"
-                    return {"threat_level": t_level, "desc": desc}
+                    description_text = f"글로벌 연락처 DB(TrueCaller)에서 '{name}'(으)로 저장된 이력이 확인되었습니다."
+                    if spam_score > 0: description_text += " (스팸 신고 이력 포함)"
+                    return {"threat_level": t_level, "description": description_text}
     except Exception as e:
         print(f"[Phone Scanner] Truecaller 에러: {e}")
     return None
@@ -134,7 +134,7 @@ async def check_telegram_account(phone_number: str):
             username = f"@{user.username}" if user.username else "아이디 비공개"
             alert_info = {
                 "threat_level": "MEDIUM",
-                "desc": f"익명 통신에 자주 활용되는 텔레그램 메신저 가입 번호입니다. (프로필: {username})"
+                "description": f"익명 통신에 자주 활용되는 텔레그램 메신저 가입 번호입니다. (프로필: {username})"
             }
             
             # 3. 내 주소록이 지저분해지지 않게 즉시 삭제 (스텔스 모드)
