@@ -36,10 +36,11 @@ ALERT_TABLE = "symsym-alerts"
 
 TARGET_CHANNELS = [
     "test99026",
-    "FalconFeedsio",
-    "CyberSecNews",
-    "daily_dark_web",
-    "BidenCash_Official"
+    "FalconFeedsio",      
+    "BidenCash_Official", 
+    "TheHackersNews",     
+    "threatintel",      
+    "BleepingComputer"
 ]
 
 TELEGRAM_LOCK = asyncio.Lock()
