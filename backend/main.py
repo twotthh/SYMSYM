@@ -104,9 +104,12 @@ async def get_user_alerts(target: str):
         # Shodan과 Censys를 모두 호출
         print("[분류] 입력값이 '도메인'입니다. ASM 파이프라인(Shodan + Censys)을 가동합니다.")
         extracted_ips = scan_subdomains(target)
+        
         if extracted_ips:
-            shodan_scan(extracted_ips)  # Shodan 스캔 진행
-            censys_scan(extracted_ips)  # Censys 스캔 진행 
+            unique_ips = list(set(extracted_ips))
+            print(f"[최적화] 중복이 제거된 {len(unique_ips)}개의 고유 IP에 대해서만 정밀 스캔을 시작합니다.")
+            shodan_scan(unique_ips)  # Shodan 스캔 진행
+            censys_scan(unique_ips)  # Censys 스캔 진행
 
     else:
         print("[분류] '일반 키워드'입니다. 딥웹/다크웹 키워드 모니터링을 수행합니다.")
