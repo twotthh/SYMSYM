@@ -303,6 +303,63 @@
     justify-content: space-between;
   }
 
+  .alert-item {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .alert-item .log-row {
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  
+  .alert-item .log-row:hover {
+    background: #FDFBFA;
+  }
+
+  .alert-details {
+    display: none;
+    padding: 16px 24px 20px 130px; 
+    background-color: #FDFBFA;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink);
+    font-size: 13.5px;
+    line-height: 1.7;
+  }
+
+  .alert-details.show {
+    display: block;
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  .alert-details p {
+    margin: 0 0 8px 0;
+  }
+  .alert-details p:last-child {
+    margin: 0;
+  }
+
+  /* 화살표 회전 애니메이션 */
+  .arrow-icon {
+    transition: transform 0.3s ease;
+    display: inline-block;
+  }
+
+  .arrow-icon.open {
+    transform: rotate(90deg);
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   @media (max-width: 780px){
     .topbar{ padding: 16px 20px; }
     main{ padding: 24px 20px 60px; }
