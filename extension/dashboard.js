@@ -68,15 +68,31 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
                 else if (displayLevel === 'MEDIUM') tagClass = 'mid';
                 else tagClass = 'low';
 
-                const rowDiv = document.createElement('div');
-                rowDiv.className = 'log-row';
-                rowDiv.innerHTML = `
-                    <span class="risk-tag ${tagClass}">${displayLevel}</span>
-                    <span class="source-tag"><span class="source-dot"></span>${alert.source}</span>
-                    <span class="detail-text">${alert.description}</span>
-                    <span class="chev">›</span>
+                const riskReasons = alert.risk_reason && alert.risk_reason.length > 0 
+                    ? alert.risk_reason.join(', ') 
+                    : '추가 탐지 근거 없음';
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'alert-item';
+                
+                const shortDesc = alert.description.length > 50 
+                    ? alert.description.substring(0, 50) + '...' 
+                    : alert.description;
+
+                itemDiv.innerHTML = `
+                    <div class="log-row" onclick="toggleAccordion(this)">
+                        <span class="risk-tag ${tagClass}">${displayLevel}</span>
+                        <span class="source-tag"><span class="source-dot"></span>${alert.source}</span>
+                        <span class="detail-text truncate">${shortDesc}</span>
+                        <span class="chev arrow-icon">›</span>
+                    </div>
+                    <div class="alert-details">
+                        <p><strong>탐지 근거 : </strong> ${riskReasons}</p>
+                        <p><strong>상세 설명 : </strong> ${alert.description}</p>
+                        ${alert.url ? `<p><strong>참고 링크 : </strong> <a href="${alert.url}" target="_blank" style="color: var(--brand); text-decoration: underline;">바로가기</a></p>` : ''}
+                    </div>
                 `;
-                tbody.appendChild(rowDiv);
+                tbody.appendChild(itemDiv);
             });
             
         } else {
@@ -114,3 +130,17 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
         document.getElementById('liveStatus').innerHTML = `<span class="dot"></span>실시간 모니터링 대기 중`;
     }
 });
+
+window.toggleAccordion = function(element) {
+    const details = element.nextElementSibling;
+    const arrow = element.querySelector('.arrow-icon');
+
+    details.classList.toggle('show');
+    arrow.classList.toggle('open');
+    
+    if(details.classList.contains('show')) {
+        element.style.borderBottom = 'none';
+    } else {
+        element.style.borderBottom = '1px solid var(--line)';
+    }
+};
