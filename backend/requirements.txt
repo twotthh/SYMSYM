@@ -1,3 +1,11 @@
-requests
+fastapi
+uvicorn
+boto3
 python-dotenv
+requests
+httpx
+aiohttp
+beautifulsoup4
+lxml
+pydantic
 pytest

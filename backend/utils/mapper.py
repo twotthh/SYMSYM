@@ -24,6 +24,10 @@ def threat_event_to_dynamodb_item(event: ThreatEvent) -> dict:
         "source": event.source,
         "threat_level": event.threat_level,
 
+        # 추가
+        "risk_score": event.risk_score,
+        "risk_reason": event.risk_reason,
+
         "breach_name": event.breach_name,
         "breach_date": event.breach_date,
 

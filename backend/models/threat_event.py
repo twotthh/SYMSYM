@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 
@@ -31,6 +31,12 @@ class ThreatEvent:
 
     # 위험도 정보
     threat_level: str = "LOW"
+
+    # 위험도 점수 (0~100)
+    risk_score: int = 0
+
+    # 위험도 산정 근거
+    risk_reason: list[str] = field(default_factory=list)
 
     # 상세 설명
     description: str = ""

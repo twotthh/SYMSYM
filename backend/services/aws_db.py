@@ -16,6 +16,10 @@ dynamodb = boto3.resource(
 def save_to_dynamodb(table_name: str, item: dict):
     try:
         table = dynamodb.Table(table_name)
+
+        # None 값 제거
+        item = {k: v for k, v in item.items() if v is not None}
+
         table.put_item(Item=item)
 
         print(f"[AWS DB] {table_name} 테이블에 데이터 저장 완료")

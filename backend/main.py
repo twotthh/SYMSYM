@@ -112,85 +112,70 @@ async def get_user_alerts(target: str):
 
     try:
         alerts_list = []
-        # 3. 전화번호든 이메일이든 DB에서 한 번에 가져옴
+
+        # 전화번호든 이메일이든 DB에서 한 번에 가져옴
         table = dynamodb.Table('symsym-threat-events-v2')
+
         response = table.query(
             KeyConditionExpression=Key('email').eq(target)
         )
-        
+
         for item in response.get('Items', []):
+
             alerts_list.append({
                 "source": item.get("source", "Unknown"),
                 "threat_level": item.get("threat_level", "HIGH"),
-                "description": item.get("description", "유출 상세 정보 없음")
+
+                # Explainable Risk
+                "risk_score": item.get("risk_score", 0),
+                "risk_reason": item.get("risk_reason", []),
+
+                "description": item.get(
+                    "description",
+                    "유출 상세 정보 없음"
+                )
             })
 
-        # ASM 인프라 취약점 데이터 조회 
+        # ASM 인프라 취약점 데이터 조회
         if re.match(DOMAIN_REGEX, target):
-            asm_table = dynamodb.Table('symsym-asm-assets')
+
+            asm_table = dynamodb.Table("symsym-asm-assets")
+
             asm_response = asm_table.scan(
-                FilterExpression=Attr('domain').contains(target)
+                FilterExpression=Attr("domain").contains(target)
             )
-            for item in asm_response.get('Items', []):
-                vulns = item.get('vulnerabilities', [])
+
+            for item in asm_response.get("Items", []):
+
+                vulns = item.get("vulnerabilities", [])
+
                 if vulns:
+
                     alerts_list.append({
-                        "source": f"{item.get('source', 'ASM')} Infrastructure", 
-                        "threat_level": "CRITICAL", 
-                        "description": f"[{item.get('ip')}] 서버 인프라에서 {len(vulns)}개의 치명적 취약점(CVE) 발견!"
+                        "source": f"{item.get('source', 'ASM')} Infrastructure",
+                        "threat_level": "CRITICAL",
+
+                        "risk_score": 100,
+                        "risk_reason": [
+                            "ASM 취약점 탐지",
+                            "치명적 CVE 존재"
+                        ],
+
+                        "description":
+                            f"[{item.get('ip')}] "
+                            f"서버 인프라에서 {len(vulns)}개의 "
+                            f"치명적 취약점(CVE) 발견!"
                     })
 
         return {
-            "email": target, 
+            "email": target,
             "message": "모니터링 완료",
             "alerts": alerts_list
         }
-        
+
     except Exception as e:
         print(f"[API 서버 에러] DynamoDB 조회 실패 : {e}")
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
-    
-# 클라이언트에서 보낼 데이터 규격 정의
-class UserAuth(BaseModel):
-    email: str
-    password: str
-
-# 비밀번호 암호화 함수
-def hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode()).hexdigest()
-
-# 1. 회원가입 API
-@app.post("/api/register")
-def register_user(user: UserAuth):
-    table = dynamodb.Table('symsym-users')
-    
-    response = table.get_item(Key={'email': user.email})
-    if 'Item' in response:
-        raise HTTPException(status_code=400, detail="이미 가입된 이메일입니다.")
-    
-    try:
-        table.put_item(
-            Item={
-                'email': user.email,
-                'password_hash': hash_password(user.password)
-            }
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal Server Error: {e}"
         )
-        return {"message": "회원가입이 완료되었습니다!"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB 저장 실패 : {e}")
-
-# 2. 로그인 API
-@app.post("/api/login")
-def login_user(user: UserAuth):
-    table = dynamodb.Table('symsym-users')
-    
-    response = table.get_item(Key={'email': user.email})
-    db_user = response.get('Item')
-    
-    if not db_user:
-        raise HTTPException(status_code=400, detail="가입되지 않은 이메일입니다.")
-    
-    if db_user['password_hash'] != hash_password(user.password):
-        raise HTTPException(status_code=400, detail="비밀번호가 일치하지 않습니다.")
-    
-    return {"message": "로그인 성공", "email": user.email}
