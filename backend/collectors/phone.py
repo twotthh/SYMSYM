@@ -107,17 +107,17 @@ async def check_telegram_account(phone_number: str):
     if not TELEGRAM_API_ID or not TELEGRAM_API_HASH: 
         return None
 
-    # 국제 번호 포맷으로 변환 (+8210...)
+    # 국제 번호 포맷으로 변환
     clean_number = phone_number.replace("-", "").replace(" ", "")
     international_number = f"+82{clean_number[1:]}" if clean_number.startswith("010") else phone_number
 
-    # 전화번호 모듈 전용 세션 생성 (DB 락 방지)
+    # 전화번호 모듈 전용 세션 생성 
     client = TelegramClient('symsym_phone_session', int(TELEGRAM_API_ID), TELEGRAM_API_HASH)
     
     try:
         await client.connect()
         
-        # 로그인이 안 되어있다면 스킵 (터미널에서 1회 인증 필요)
+        # 로그인이 안 되어있다면 스킵 
         if not await client.is_user_authorized():
             print("[Phone Scanner] 텔레그램 전용 로그인이 필요하여 조회를 건너뜁니다.")
             await client.disconnect()
@@ -128,7 +128,7 @@ async def check_telegram_account(phone_number: str):
         result = await client(ImportContactsRequest([contact]))
 
         alert_info = None
-        # 2. 유저 정보가 반환되었다면 가입된 번호!
+        # 2. 유저 정보가 반환되었다면 가입된 번호
         if result.users:
             user = result.users[0]
             username = f"@{user.username}" if user.username else "아이디 비공개"
@@ -137,7 +137,6 @@ async def check_telegram_account(phone_number: str):
                 "description": f"익명 통신에 자주 활용되는 텔레그램 메신저 가입 번호입니다. (프로필: {username})"
             }
             
-            # 3. 내 주소록이 지저분해지지 않게 즉시 삭제 (스텔스 모드)
             await client(DeleteContactsRequest(id=[user.id]))
 
         await client.disconnect()
@@ -152,31 +151,31 @@ async def scan_phone_number(phone_number: str):
     print(f"\n[Phone Scanner] '{phone_number}' 종합 스캔 시작...")
     alerts = []
     
-    # 1. 번호 포맷팅
+    # 번호 포맷팅
     clean_number = phone_number.replace("-", "").replace(" ", "")
     international_number = f"+82{clean_number[1:]}" if clean_number.startswith("010") else phone_number
 
-    # [Phase 2] 한국 스팸 DB (더콜) 조회
+    # 한국 스팸 DB (더콜) 조회
     thecall_result = await check_thecall_spam(phone_number)
     if thecall_result:
         alerts.append({"source": "TheCall (한국 스팸 DB)", **thecall_result})
 
-    # [Phase 1] 대포폰(VoIP) 조회
+    # 대포폰  조회
     voip_result = await check_voip_numverify(international_number)
     if voip_result:
         alerts.append({"source": "NumVerify (대포폰 식별)", **voip_result})
 
-    # [Phase 3] 글로벌 연락처 DB (Truecaller) 조회
+    # 글로벌 연락처 DB (Truecaller) 조회
     truecaller_result = await check_truecaller_osint(international_number)
     if truecaller_result:
         alerts.append({"source": "Truecaller OSINT", **truecaller_result})
 
-    # [Phase 3] 텔레그램 가입 여부 조회
+    # 텔레그램 가입 여부 조회
     telegram_result = await check_telegram_account(international_number)
     if telegram_result:
         alerts.append({"source": "Telegram (메신저 추적)", **telegram_result})
 
-    # [Phase 1] 구글 웹 노출(Dorking) 추적
+    # 구글 웹 Dorking 추적
     print(f"[Phone Scanner] 구글 웹 노출 정보 추적 중...")
     if await search_google_exposure(phone_number) or await search_google_exposure(clean_number):
         alerts.append({

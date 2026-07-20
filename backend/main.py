@@ -84,7 +84,7 @@ async def get_user_alerts(target: str):
                     table.put_item(
                         Item={
                             'email': target,  
-                            'id': uuid.uuid4().hex,  
+                            'event_id': uuid.uuid4().hex,  
                             'source': alert.get("source", "Unknown"),
                             'threat_level': alert.get("threat_level", "LOW"),
                             'description': alert.get("description", "유출 상세 정보 없음")
