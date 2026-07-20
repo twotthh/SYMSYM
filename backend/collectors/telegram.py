@@ -33,13 +33,7 @@ API_HASH = (
 THREAT_EVENT_TABLE = "symsym-threat-events-v2"
 ALERT_TABLE = "symsym-alerts"
 
-TARGET_CHANNELS = [
-    "test99026",
-    "FalconFeedsio",
-    "CyberSecNews",
-    "daily_dark_web",
-    "BidenCash_Official"
-]
+TARGET_CHANNELS = []
 
 async def scrape_telegram(target: str):
     print(f"[텔레그램] '{target}' 실시간 감시 시작\n")
