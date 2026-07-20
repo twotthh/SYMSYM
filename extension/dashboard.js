@@ -79,8 +79,9 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
                     ? alert.description.substring(0, 50) + '...' 
                     : alert.description;
 
+                // innerHTML에는 onclick을 넣지 않습니다.
                 itemDiv.innerHTML = `
-                    <div class="log-row" onclick="toggleAccordion(this)">
+                    <div class="log-row">
                         <span class="risk-tag ${tagClass}">${displayLevel}</span>
                         <span class="source-tag"><span class="source-dot"></span>${alert.source}</span>
                         <span class="detail-text truncate">${shortDesc}</span>
@@ -92,6 +93,22 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
                         ${alert.url ? `<p><strong>참고 링크 : </strong> <a href="${alert.url}" target="_blank" style="color: var(--brand); text-decoration: underline;">바로가기</a></p>` : ''}
                     </div>
                 `;
+
+                const logRowElement = itemDiv.querySelector('.log-row');
+                logRowElement.addEventListener('click', function() {
+                    const details = this.nextElementSibling;
+                    const arrow = this.querySelector('.arrow-icon');
+
+                    details.classList.toggle('show');
+                    arrow.classList.toggle('open');
+                    
+                    if(details.classList.contains('show')) {
+                        this.style.borderBottom = 'none';
+                    } else {
+                        this.style.borderBottom = '1px solid var(--line)';
+                    }
+                });
+
                 tbody.appendChild(itemDiv);
             });
             
@@ -130,17 +147,3 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
         document.getElementById('liveStatus').innerHTML = `<span class="dot"></span>실시간 모니터링 대기 중`;
     }
 });
-
-window.toggleAccordion = function(element) {
-    const details = element.nextElementSibling;
-    const arrow = element.querySelector('.arrow-icon');
-
-    details.classList.toggle('show');
-    arrow.classList.toggle('open');
-    
-    if(details.classList.contains('show')) {
-        element.style.borderBottom = 'none';
-    } else {
-        element.style.borderBottom = '1px solid var(--line)';
-    }
-};
