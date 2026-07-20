@@ -46,7 +46,7 @@ def search_google_leaks(target: str):
                 "api_key": SERPAPI_API_KEY,
                 "num": 5
             },
-            timeout=10
+            timeout=30
         )
 
         if response.status_code != 200:

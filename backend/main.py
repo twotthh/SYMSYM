@@ -57,6 +57,12 @@ def read_root():
 async def get_user_alerts(target: str):  
     print(f"\n[모니터링 시작] 클라이언트에서 '{target}' 조회를 요청했습니다.")
     
+    # target 입력값 정규화 (양옆 공백 및 맨 앞의 @ 제거)
+    target = target.strip()
+    if target.startswith("@"):
+        target = target.lstrip("@")
+        print(f"[정규화] 검색어가 '{target}'(으)로 변경되었습니다.")
+
     # 입력값 분류 및 라우팅
     if re.match(EMAIL_REGEX, target):
         print("[분류] 입력값이 '이메일'입니다. OSINT 스캔을 시작합니다.")
