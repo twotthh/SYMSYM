@@ -111,61 +111,71 @@ async def get_user_alerts(target: str):
     print(f"\n[{target}] 봇 수집 및 적재 완료 -> DB 결과 가져옴\n")
 
     try:
-    alerts_list = []
+        alerts_list = []
 
-    # 3. 전화번호든 이메일이든 DB에서 한 번에 가져옴
-    table = dynamodb.Table('symsym-threat-events-v2')
-    response = table.query(
-        KeyConditionExpression=Key('email').eq(target)
-    )
+        # 전화번호든 이메일이든 DB에서 한 번에 가져옴
+        table = dynamodb.Table('symsym-threat-events-v2')
 
-    for item in response.get('Items', []):
-
-        alerts_list.append({
-            "source": item.get("source", "Unknown"),
-            "threat_level": item.get("threat_level", "HIGH"),
-
-            # 추가
-            "risk_score": item.get("risk_score", 0),
-            "risk_reason": item.get("risk_reason", []),
-
-            "description": item.get("description", "유출 상세 정보 없음")
-        })
-
-    # ASM 인프라 취약점 데이터 조회
-    if re.match(DOMAIN_REGEX, target):
-        asm_table = dynamodb.Table('symsym-asm-assets')
-
-        asm_response = asm_table.scan(
-            FilterExpression=Attr('domain').contains(target)
+        response = table.query(
+            KeyConditionExpression=Key('email').eq(target)
         )
 
-        for item in asm_response.get('Items', []):
+        for item in response.get('Items', []):
 
-            vulns = item.get('vulnerabilities', [])
+            alerts_list.append({
+                "source": item.get("source", "Unknown"),
+                "threat_level": item.get("threat_level", "HIGH"),
 
-            if vulns:
+                # Explainable Risk
+                "risk_score": item.get("risk_score", 0),
+                "risk_reason": item.get("risk_reason", []),
 
-                alerts_list.append({
-                    "source": f"{item.get('source', 'ASM')} Infrastructure",
-                    "threat_level": "CRITICAL",
+                "description": item.get(
+                    "description",
+                    "유출 상세 정보 없음"
+                )
+            })
 
-                    # 추가
-                    "risk_score": 100,
-                    "risk_reason": [
-                        "ASM 취약점 탐지",
-                        "치명적 CVE 존재"
-                    ],
+        # ASM 인프라 취약점 데이터 조회
+        if re.match(DOMAIN_REGEX, target):
 
-                    "description": f"[{item.get('ip')}] 서버 인프라에서 {len(vulns)}개의 치명적 취약점(CVE) 발견!"
-                })
+            asm_table = dynamodb.Table("symsym-asm-assets")
 
-    return {
-        "email": target,
-        "message": "모니터링 완료",
-        "alerts": alerts_list
-    }
+            asm_response = asm_table.scan(
+                FilterExpression=Attr("domain").contains(target)
+            )
 
-except Exception as e:
-    print(f"[API 서버 에러] DynamoDB 조회 실패 : {e}")
-    raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
+            for item in asm_response.get("Items", []):
+
+                vulns = item.get("vulnerabilities", [])
+
+                if vulns:
+
+                    alerts_list.append({
+                        "source": f"{item.get('source', 'ASM')} Infrastructure",
+                        "threat_level": "CRITICAL",
+
+                        "risk_score": 100,
+                        "risk_reason": [
+                            "ASM 취약점 탐지",
+                            "치명적 CVE 존재"
+                        ],
+
+                        "description":
+                            f"[{item.get('ip')}] "
+                            f"서버 인프라에서 {len(vulns)}개의 "
+                            f"치명적 취약점(CVE) 발견!"
+                    })
+
+        return {
+            "email": target,
+            "message": "모니터링 완료",
+            "alerts": alerts_list
+        }
+
+    except Exception as e:
+        print(f"[API 서버 에러] DynamoDB 조회 실패 : {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal Server Error: {e}"
+        )
