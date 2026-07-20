@@ -1,11 +1,12 @@
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Optional
 
 @dataclass
 class User:
     email: str
-    target_domain: str
-    created_at: datetime
-    last_scan: datetime
-    scan_cycle: str
-    is_active: bool
+    target_domain: Optional[str] = None
+    created_at: Optional[datetime] = None
+    last_scan: Optional[datetime] = None
+    scan_cycle: Optional[str] = None
+    is_active: bool = True
