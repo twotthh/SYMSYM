@@ -18,7 +18,7 @@ from backend.utils.event_id import generate_event_id
 load_dotenv()
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-GOOGLE_SEARCH_CX = os.getenv("GOOGLE_CX")
+GOOGLE_SEARCH_CX = os.getenv("GOOGLE_SEARCH_CX")
 
 THREAT_EVENT_TABLE = "symsym-threat-events-v2"
 ALERT_TABLE = "symsym-alerts"
